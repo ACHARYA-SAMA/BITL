@@ -174,31 +174,34 @@ class GestureGuide:
         """Dim the scene and draw the current page's cards in a grid."""
         if not self.visible:
             return
-        if frame.shape[1::-1] != (1280, 720):
-            canvas = cv2.resize(frame, (1280, 720))
+        # Laid out at 1280x720, or 720x1280 for portrait (phone) frames, then resized.
+        design = (720, 1280) if frame.shape[0] > frame.shape[1] else (1280, 720)
+        if frame.shape[1::-1] != design:
+            canvas = cv2.resize(frame, design)
             self.render(canvas)
             frame[:] = cv2.resize(canvas, frame.shape[1::-1])
             return
         height, width = frame.shape[:2]
+        portrait = height > width
         cv2.addWeighted(frame, 0.25, np.zeros_like(frame), 0.75, 0, dst=frame)
         name = self.names[self.page]
         cards = PAGES[name]
         font, bold = cv2.FONT_HERSHEY_SIMPLEX, cv2.FONT_HERSHEY_DUPLEX
         title = "AR HANDS" if self.onboarding else f"GESTURE GUIDE  -  {name}"
-        cv2.putText(frame, title, (40, 62), bold, 1.25, (255, 255, 255), 2, cv2.LINE_AA)
-        tabs_x = width - 40
+        cv2.putText(frame, title, (40, 62), bold, 1.0 if portrait else 1.25, (255, 255, 255), 2, cv2.LINE_AA)
+        tabs_x, tabs_y = width - 40, 104 if portrait else 56  # Portrait: tabs on their own row.
         for index in reversed(range(len(PAGES))):
             label = self.names[index]
             (tw, _), _ = cv2.getTextSize(label, font, 0.55, 1)
             tabs_x -= tw + 22
             active = index == self.page
             if active:
-                cv2.rectangle(frame, (tabs_x - 8, 34), (tabs_x + tw + 8, 64), (80, 70, 60), -1)
-            cv2.putText(frame, label, (tabs_x, 56), font, 0.55, (255, 255, 255) if active else (150, 150, 150),
+                cv2.rectangle(frame, (tabs_x - 8, tabs_y - 22), (tabs_x + tw + 8, tabs_y + 8), (80, 70, 60), -1)
+            cv2.putText(frame, label, (tabs_x, tabs_y), font, 0.55, (255, 255, 255) if active else (150, 150, 150),
                         1, cv2.LINE_AA)
-        columns = 2
+        columns = 1 if portrait else 2
         rows = (len(cards) + columns - 1) // columns
-        top, bottom, margin, gap = 92, height - 64, 40, 18
+        top, bottom, margin, gap = 136 if portrait else 92, height - 64, 40, 18
         card_w = (width - 2 * margin - gap * (columns - 1)) // columns
         card_h = min(250, (bottom - top - gap * (rows - 1)) // rows)
         icon = min(card_h - 24, int(card_w * 0.38))
@@ -228,5 +231,6 @@ class GestureGuide:
                 line_y += 22
         footer = ("Press any key or pinch to start  -  ? opens this guide any time" if self.onboarding else
                   "Left/Right or A/D: page   -   ? or Esc: close   -   pinch: close")
-        (fw, _), _ = cv2.getTextSize(footer, font, 0.6, 1)
-        cv2.putText(frame, footer, ((width - fw) // 2, height - 26), font, 0.6, (220, 220, 220), 1, cv2.LINE_AA)
+        scale = min(0.6, 0.6 * (width - 2 * margin) / cv2.getTextSize(footer, font, 0.6, 1)[0][0])
+        (fw, _), _ = cv2.getTextSize(footer, font, scale, 1)
+        cv2.putText(frame, footer, ((width - fw) // 2, height - 26), font, scale, (220, 220, 220), 1, cv2.LINE_AA)

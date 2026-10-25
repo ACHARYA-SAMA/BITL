@@ -5,3 +5,8 @@ opencv-python>=4.10,<4.12 ; platform_system != "Darwin" or platform_machine != "
 mediapipe==0.10.21 ; platform_system == "Darwin" and platform_machine == "x86_64"
 opencv-contrib-python>=4.10,<4.12 ; platform_system == "Darwin" and platform_machine == "x86_64"
 numpy>=1.26,<2.0
+# Phone camera: the self-signed HTTPS certificate phone browsers need for camera access.
+cryptography>=42,<47
+# Phone camera: decodes the phone's hardware H.264 (about 5 Mbps at 720p60 instead of ~30 as JPEG).
+# Optional: without it the phone falls back to JPEG.
+av>=14,<17

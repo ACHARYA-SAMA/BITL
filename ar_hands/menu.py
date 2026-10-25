@@ -18,6 +18,7 @@ from dataclasses import dataclass
 import cv2
 import numpy as np
 from .config import Color, Config
+from .settings import CAMERA_SOURCES
 
 Point = tuple[float, float]
 Box = tuple[int, int, int, int]  # x0, y0, x1, y1 in frame pixels.
@@ -45,13 +46,15 @@ ITEMS: tuple[Item, ...] = (
     Item("glow", "Skeleton glow"),
     Item("show_skeleton", "Show skeleton"),
     Item("show_hud", "Show HUD"),
+    Item("fullscreen", "Fullscreen"),
     Item("guide", "Gesture guide", "action"),
     Item("close", "Return to camera", "action"),
     Item("quit", "Quit", "action"),
+    Item("camera_source", "Camera", "choice", CAMERA_SOURCES),
+    Item("max_hands", "Max hands", "choice", (2, 4, 6, 8)),
     Item("volume", "Volume", "slider", low=0.0, high=1.0, step=0.05),
     Item("muted", "Mute sound"),
     Item("sensitivity", "Sensitivity", "slider", low=0.3, high=0.9, step=0.05),
-    Item("fullscreen", "Fullscreen"),
     Item("record", "Record video"),
     Item("record_clean", "Clean recording"),
     Item("adaptive_quality", "Adaptive quality"),
@@ -114,8 +117,12 @@ class Menu:
             return self._boxes
         t = self.config.menu
         width, height = size
-        scale = min(width / 1280, height / 720)
-        rows = (len(ITEMS) + t.columns - 1) // t.columns
+        # A portrait (phone) frame gets one tall column at full size instead of
+        # two columns shrunk to fit its narrow width.
+        portrait = height > width
+        columns = 1 if portrait else t.columns
+        scale = min(width / 720, height / 1280) if portrait else min(width / 1280, height / 720)
+        rows = (len(ITEMS) + columns - 1) // columns
         header, footer = int(84 * scale), int(44 * scale)
         gap = max(4, int(t.gap * scale * 0.8))
         room = height - int(24 * scale) - header - footer - (rows - 1) * gap
@@ -123,7 +130,7 @@ class Menu:
         panel_w = min(width - 2 * gap, int(t.width * scale))
         panel_h = header + rows * row_h + (rows - 1) * gap + footer
         x0, y0 = (width - panel_w) // 2, max(0, (height - panel_h) // 2)
-        cell_w = (panel_w - (t.columns + 1) * gap) // t.columns
+        cell_w = (panel_w - (columns + 1) * gap) // columns
         boxes = {}
         for index, item in enumerate(ITEMS):
             column, row = divmod(index, rows)

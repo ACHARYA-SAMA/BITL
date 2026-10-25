@@ -18,7 +18,7 @@ import cv2
 import numpy as np
 from ..config import EffectsConfig
 from ..gestures.engine import GestureEngine
-from ..gestures.events import BOTH, EventBus, GestureEvent
+from ..gestures.events import BOTH, EventBus, GestureEvent, pair_of
 from ..gestures.types import Gesture
 from .base import Effect, EffectContext, EffectState, ModeController
 from .compositing import Sprite, overlay_rgba
@@ -243,7 +243,8 @@ class SusanooEffect(Effect):
             if columns.sum() > 5:
                 target = float(np.average(np.arange(len(columns)) * 8, weights=columns))
         else:
-            centers = [ctx.engine.palm_center(h) for h in ("Left", "Right") if ctx.engine.visible(h)]
+            centers = [ctx.engine.palm_center(h) for h in pair_of(getattr(self, "owner", BOTH))
+                       if ctx.engine.visible(h)]
             if len(centers) == 2:
                 target = (centers[0][0] + centers[1][0]) / 2
         self.anchor_x = target if self.anchor_x is None else self.anchor_x + (target - self.anchor_x) * 0.12
@@ -329,6 +330,7 @@ class Susanoo(ModeController):
             self.manager.hooks.emit("susanoo_dismiss")
             return
         self.effect = SusanooEffect(event.timestamp, self.config.susanoo_rise_s, self.config.susanoo_fade_s)
+        self.effect.owner = event.hand
         self.manager.spawn(self.effect)
         self.manager.screen.flash(0.35)
         self.manager.screen.shake(10.0)

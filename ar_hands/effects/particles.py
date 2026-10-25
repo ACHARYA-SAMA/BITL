@@ -213,81 +213,112 @@ class ParticleSystem:
             current = frame[ys, xs].astype(np.float32)
             frame[ys, xs] = (current + (colors[use][inside] - current) * weight).astype(np.uint8)
 
-    def _render_splat(self, frame: np.ndarray, alive: np.ndarray) -> None:
-        height, width = frame.shape[:2]
+    def splat_inputs(self, alive: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+        """(positions, Gaussian sigma, color, alpha) of the live particles ``alive``."""
         age = 1.0 - np.clip(self.life[alive] / self.max_life[alive], 0, 1)
         sigma = self.size[alive] * (1.0 + self.size_growth * age)
         rgb, alpha = self.ramp.sample(age)
         rgb *= (0.8 + 0.4 * self.color_seed[alive])[:, None]  # Per-particle brightness variety.
-        positions = self.pos[alive]
-        pad = 3.0 * float(sigma.max())
-        x0 = max(0, floor(float(positions[:, 0].min()) - pad))
-        y0 = max(0, floor(float(positions[:, 1].min()) - pad))
-        x1 = min(width, ceil(float(positions[:, 0].max()) + pad))
-        y1 = min(height, ceil(float(positions[:, 1].max()) + pad))
-        if x0 >= x1 or y0 >= y1:
-            return
-        roi_w, roi_h = x1 - x0, y1 - y0
-        # Coarser buffers for big blurs and big areas keep the cost bounded.
-        scale = min(self.render_scale, sqrt(self.buffer_budget / (roi_w * roi_h)),
-                    self.max_blur / float(sigma.max()))
-        scale = max(scale, 0.05)
-        buf_w, buf_h = max(1, ceil(roi_w * scale)), max(1, ceil(roi_h * scale))
-        bx = np.clip(((positions[:, 0] - x0) * scale).astype(np.int32), 0, buf_w - 1)
-        by = np.clip(((positions[:, 1] - y0) * scale).astype(np.int32), 0, buf_h - 1)
-        inside = (positions[:, 0] >= x0) & (positions[:, 0] < x1) & \
-                 (positions[:, 1] >= y0) & (positions[:, 1] < y1)
-        flat = by * buf_w + bx
-        channels = 3 if self.blend is Blend.ADD else 4
-        values = np.empty((len(alive), channels), np.float32)
-        values[:, :3] = rgb * alpha[:, None]  # Premultiplied color.
-        if channels == 4:
-            values[:, 3] = alpha
-        values[~inside] = 0
-        buffer_sigma = np.maximum(sigma * scale, 0.7)
-        low, high = float(buffer_sigma.min()), float(buffer_sigma.max())
-        if high / low < 1.3 or self.size_bins < 2:
-            bins = np.zeros(len(alive), np.int32)
-            centers = [float(np.sqrt(low * high))]
-        else:
-            edges = np.geomspace(low, high, self.size_bins + 1)
-            bins = np.clip(np.digitize(buffer_sigma, edges[1:-1]), 0, self.size_bins - 1)
-            centers = [float(np.sqrt(edges[i] * edges[i + 1])) for i in range(self.size_bins)]
-        total = np.zeros((buf_h, buf_w, channels), np.float32)
-        cells = buf_w * buf_h
-        for index, bin_sigma in enumerate(centers):
-            members = np.flatnonzero(bins == index)
-            if not members.size:
-                continue
-            # A unit-sum Gaussian peaks at 1/(2 pi sigma^2); pre-scale so each
-            # particle's blurred peak equals its own color and alpha.
-            weight = 2 * pi * bin_sigma ** 2
-            layer = np.empty((cells, channels), np.float32)
-            for channel in range(channels):
-                layer[:, channel] = np.bincount(flat[members], values[members, channel] * weight,
-                                                minlength=cells)
-            layer = layer.reshape(buf_h, buf_w, channels)
-            total += cv2.GaussianBlur(layer, (0, 0), bin_sigma)
-        roi = frame[y0:y1, x0:x1]
-        if self.blend is Blend.ADD:
-            # Quantize at low resolution, then upsample 8-bit: 4x less data to move.
-            low = np.clip(total, 0, 255).astype(np.uint8)
-            cv2.add(roi, cv2.resize(low, (roi_w, roi_h), interpolation=cv2.INTER_LINEAR), dst=roi)
-        else:
-            # Summed premultiplied color would turn dense smoke white. Use the
-            # density-weighted average color, and coverage 1 - exp(-density), so
-            # overlapping puffs get thicker and stay smoke-colored.
-            density = total[..., 3:4]
-            average = total[..., :3] / np.maximum(density, 1e-6)
-            coverage = 1.0 - np.exp(-density)
-            total[..., :3] = average * coverage
-            total[..., 3:4] = coverage * 255.0
-            low = np.clip(total, 0, 255).astype(np.uint8)
-            full = cv2.resize(low, (roi_w, roi_h), interpolation=cv2.INTER_LINEAR)
-            # roi * (1 - alpha) + premultiplied color, all in saturating 8-bit OpenCV ops.
-            keep = cv2.cvtColor(255 - full[..., 3], cv2.COLOR_GRAY2BGR)
-            cv2.multiply(roi, keep, dst=roi, scale=1 / 255)
-            cv2.add(roi, full[..., :3], dst=roi)
+        return self.pos[alive], sigma, rgb, alpha
+
+    def _render_splat(self, frame: np.ndarray, alive: np.ndarray) -> None:
+        splat(frame, *self.splat_inputs(alive), self.blend, self.render_scale, self.buffer_budget,
+              self.max_blur, self.size_bins)
+
+
+def splat(frame: np.ndarray, positions: np.ndarray, sigma: np.ndarray, rgb: np.ndarray, alpha: np.ndarray,
+          blend: Blend, render_scale: float, buffer_budget: int, max_blur: float, size_bins: int) -> None:
+    """Splat-then-blur particles onto ``frame`` (see the module docstring)."""
+    height, width = frame.shape[:2]
+    pad = 3.0 * float(sigma.max())
+    x0 = max(0, floor(float(positions[:, 0].min()) - pad))
+    y0 = max(0, floor(float(positions[:, 1].min()) - pad))
+    x1 = min(width, ceil(float(positions[:, 0].max()) + pad))
+    y1 = min(height, ceil(float(positions[:, 1].max()) + pad))
+    if x0 >= x1 or y0 >= y1:
+        return
+    roi_w, roi_h = x1 - x0, y1 - y0
+    # Coarser buffers for big blurs and big areas keep the cost bounded.
+    scale = min(render_scale, sqrt(buffer_budget / (roi_w * roi_h)),
+                max_blur / float(sigma.max()))
+    scale = max(scale, 0.05)
+    buf_w, buf_h = max(1, ceil(roi_w * scale)), max(1, ceil(roi_h * scale))
+    bx = np.clip(((positions[:, 0] - x0) * scale).astype(np.int32), 0, buf_w - 1)
+    by = np.clip(((positions[:, 1] - y0) * scale).astype(np.int32), 0, buf_h - 1)
+    inside = (positions[:, 0] >= x0) & (positions[:, 0] < x1) & \
+             (positions[:, 1] >= y0) & (positions[:, 1] < y1)
+    flat = by * buf_w + bx
+    channels = 3 if blend is Blend.ADD else 4
+    values = np.empty((len(positions), channels), np.float32)
+    values[:, :3] = rgb * alpha[:, None]  # Premultiplied color.
+    if channels == 4:
+        values[:, 3] = alpha
+    values[~inside] = 0
+    buffer_sigma = np.maximum(sigma * scale, 0.7)
+    low, high = float(buffer_sigma.min()), float(buffer_sigma.max())
+    if high / low < 1.3 or size_bins < 2:
+        bins = np.zeros(len(positions), np.int32)
+        centers = [float(np.sqrt(low * high))]
+    else:
+        edges = np.geomspace(low, high, size_bins + 1)
+        bins = np.clip(np.digitize(buffer_sigma, edges[1:-1]), 0, size_bins - 1)
+        centers = [float(np.sqrt(edges[i] * edges[i + 1])) for i in range(size_bins)]
+    total = np.zeros((buf_h, buf_w, channels), np.float32)
+    cells = buf_w * buf_h
+    for index, bin_sigma in enumerate(centers):
+        members = np.flatnonzero(bins == index)
+        if not members.size:
+            continue
+        # A unit-sum Gaussian peaks at 1/(2 pi sigma^2); pre-scale so each
+        # particle's blurred peak equals its own color and alpha.
+        weight = 2 * pi * bin_sigma ** 2
+        layer = np.empty((cells, channels), np.float32)
+        for channel in range(channels):
+            layer[:, channel] = np.bincount(flat[members], values[members, channel] * weight,
+                                            minlength=cells)
+        layer = layer.reshape(buf_h, buf_w, channels)
+        total += cv2.GaussianBlur(layer, (0, 0), bin_sigma)
+    roi = frame[y0:y1, x0:x1]
+    if blend is Blend.ADD:
+        # Quantize at low resolution, then upsample 8-bit: 4x less data to move.
+        low = np.clip(total, 0, 255).astype(np.uint8)
+        cv2.add(roi, cv2.resize(low, (roi_w, roi_h), interpolation=cv2.INTER_LINEAR), dst=roi)
+    else:
+        # Summed premultiplied color would turn dense smoke white. Use the
+        # density-weighted average color, and coverage 1 - exp(-density), so
+        # overlapping puffs get thicker and stay smoke-colored.
+        density = total[..., 3:4]
+        average = total[..., :3] / np.maximum(density, 1e-6)
+        coverage = 1.0 - np.exp(-density)
+        total[..., :3] = average * coverage
+        total[..., 3:4] = coverage * 255.0
+        low = np.clip(total, 0, 255).astype(np.uint8)
+        full = cv2.resize(low, (roi_w, roi_h), interpolation=cv2.INTER_LINEAR)
+        # roi * (1 - alpha) + premultiplied color, all in saturating 8-bit OpenCV ops.
+        keep = cv2.cvtColor(255 - full[..., 3], cv2.COLOR_GRAY2BGR)
+        cv2.multiply(roi, keep, dst=roi, scale=1 / 255)
+        cv2.add(roi, full[..., :3], dst=roi)
+
+
+DOT_SIGMA = 2.2  # Glowing particles thinner than this (in px) are drawn as dots, not splatted.
+
+
+def draw_dots(light: np.ndarray, positions: np.ndarray, sigma: np.ndarray, colors: np.ndarray) -> None:
+    """Small glowing particles as anti-aliased dots, added (not painted) onto ``light``."""
+    height, width = light.shape[:2]
+    x0 = max(0, int(positions[:, 0].min()) - 4)
+    y0 = max(0, int(positions[:, 1].min()) - 4)
+    x1 = min(width, int(positions[:, 0].max()) + 5)
+    y1 = min(height, int(positions[:, 1].max()) + 5)
+    if x0 >= x1 or y0 >= y1:
+        return
+    layer = np.zeros((y1 - y0, x1 - x0, 3), np.uint8)
+    radii = np.maximum(1, np.round(sigma)).astype(np.int32)
+    for (x, y), radius, color in zip((positions - (x0, y0)).astype(np.int32), radii, colors):
+        cv2.circle(layer, (int(x), int(y)), int(radius), (float(color[0]), float(color[1]), float(color[2])),
+                   -1, cv2.LINE_AA)
+    roi = light[y0:y1, x0:x1]
+    cv2.add(roi, layer, dst=roi)
 
 
 class ParticleSet:
@@ -337,6 +368,31 @@ class ParticleSet:
         """Kill every particle."""
         for system in self.systems.values():
             system.clear()
+
+    @property
+    def lights(self) -> tuple[ParticleSystem, ...]:
+        """The glowing (additive) systems."""
+        return self.fire, self.sparks, self.spirit, self.ember
+
+    def render_light(self, light: np.ndarray) -> bool:
+        """Every glowing particle into ``light`` in ONE splat pass: each pass costs about
+        a millisecond whatever its particle count, so four systems cost one pass."""
+        parts = [system.splat_inputs(alive) for system in self.lights
+                 if (alive := np.flatnonzero(system.life > 0)).size]
+        if not parts:
+            return False
+        positions, sigma, rgb, alpha = (np.concatenate(column) for column in zip(*parts))
+        # Pinpoint sparks and embers spread far; blurring a buffer that covers them all
+        # costs more than drawing them as dots (the compositor's bloom adds their glow).
+        tiny = sigma < DOT_SIGMA
+        if tiny.any():
+            draw_dots(light, positions[tiny], sigma[tiny], rgb[tiny] * alpha[tiny, None])
+        if not tiny.all():
+            big = ~tiny
+            first = self.fire
+            splat(light, positions[big], sigma[big], rgb[big], alpha[big], Blend.ADD, first.render_scale,
+                  first.buffer_budget, first.max_blur, first.size_bins)
+        return True
 
     def set_budget(self, fraction: float) -> None:
         """Scale every system's particle cap (1.0 = configured capacity)."""

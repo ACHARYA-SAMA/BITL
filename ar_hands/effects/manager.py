@@ -4,8 +4,11 @@ Per frame, after GestureEngine.update() has dispatched its events:
 
     ModeManager.update(ctx)    active mode's controllers poll hands (drag, aim, charge)
     EffectManager.update(...)  every effect + particles + screen FX advance by dt
-    EffectManager.render()     alpha layer:    effects with layer < 20 (blocks), smoke, chunks
-                               additive layer: remaining effects, fire, sparks
+    EffectManager.render()     alpha layer:    effects with layer < 20 (blocks)
+                               distortion:     heat haze, shockwaves, lensing bend the picture
+                               smoke, chunks, dust
+                               light:          emissive effects, glows, fire/sparks into the
+                                               light buffer, then bloom + light spill (lighting.py)
     ModeManager.render()       interaction overlays (charge glows, pinch cursors)
     EffectManager.post()       flash, then camera shake (after the skeleton is drawn)
 """
@@ -24,6 +27,8 @@ from ..hand_tracker import HandData
 from ..segmentation import BackgroundModel
 from .base import Effect, EffectContext, HookEmitter, ModeController
 from .fireball import Explosion
+from .flame import Distortion, FlameField
+from .lighting import LightCompositor
 from .particles import ParticleSet
 from .sprites import SpriteLibrary
 
@@ -84,6 +89,9 @@ class EffectManager:
         self.hooks = HookEmitter()
         self.particles = ParticleSet(config, seed)
         self.screen = ScreenFX(config, self.rng)
+        self.flames = FlameField()
+        self.distortion = Distortion(self.flames.noise)
+        self.lighting = LightCompositor()
         self.effects: list[Effect] = []
         self.timings: dict[str, float] = {}  # Smoothed ms per effect type, update + render.
         self.now = 0.0
@@ -154,30 +162,58 @@ class EffectManager:
         self.effects = [effect for effect in self.effects if effect.alive]
         return ctx
 
-    def render(self, frame: np.ndarray) -> None:
-        """Draw matter (alpha) first, then light (additive), so glow sits on top."""
+    def render(self, frame: np.ndarray, extra_light: np.ndarray | None = None) -> None:
+        """Matter first, then distortion and smoke, then everything that emits light.
+
+        ``extra_light`` (the neon drawing) joins the light buffer, so it too
+        blooms and lights the scene."""
         ctx = self._ctx or self.context(self.now, 0.0, size=(frame.shape[1], frame.shape[0]))
         ordered = sorted(self.effects, key=lambda effect: effect.layer)
         matter = [effect for effect in ordered if effect.layer < ALPHA_LAYER_LIMIT]
-        light = [effect for effect in ordered if effect.layer >= ALPHA_LAYER_LIMIT]
+        overlay = [effect for effect in ordered if effect.layer >= ALPHA_LAYER_LIMIT and not effect.emissive]
         for effect in matter:
             start = time.perf_counter()
             effect.render(frame, ctx)
+            self._timed(effect.name, start)
+        for effect in ordered:
+            start = time.perf_counter()
+            effect.distort(frame, ctx)
             self._timed(effect.name, start)
         for system in (self.particles.smoke, self.particles.chunks, self.particles.dust):
             start = time.perf_counter()
             system.render(frame)
             self._timed("particles", start)
-        for effect in light:
+        for effect in overlay:
             start = time.perf_counter()
             effect.render(frame, ctx)
             self._timed(effect.name, start)
-        for system in (self.particles.fire, self.particles.sparks, self.particles.spirit,
-                       self.particles.ember):
-            start = time.perf_counter()
-            system.render(frame)
-            self._timed("particles", start)
+        self._render_light(frame, ctx, ordered, extra_light)
         self._commit_timings()
+
+    def _render_light(self, frame: np.ndarray, ctx: EffectContext, ordered: list[Effect],
+                      extra_light: np.ndarray | None) -> None:
+        """Light sources into the light buffer, then bloom and spill (skipped when dark)."""
+        sources = [effect for effect in ordered if effect.emissive or effect.glows]
+        glowing = any(np.any(system.life > 0) for system in self.particles.lights)
+        if not sources and not glowing and extra_light is None:
+            return
+        light = self.lighting.begin(frame)
+        if extra_light is not None:
+            cv2.add(light, extra_light, dst=light)
+        for effect in sources:
+            start = time.perf_counter()
+            if effect.emissive:
+                effect.render(light, ctx)
+            else:
+                effect.glow(light, ctx)
+            self._timed(effect.name, start)
+        start = time.perf_counter()
+        self.particles.render_light(light)
+        self._timed("particles", start)
+        start = time.perf_counter()
+        self.lighting.lit = True
+        self.lighting.compose(frame)
+        self._timed("lighting", start)
 
     def post(self, frame: np.ndarray) -> None:
         """Screen flash and shake, applied after everything that should shake."""

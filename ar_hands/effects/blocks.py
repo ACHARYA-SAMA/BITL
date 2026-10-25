@@ -22,7 +22,7 @@ import cv2
 import numpy as np
 from ..config import EffectsConfig
 from ..gestures.engine import GestureEngine
-from ..gestures.events import EventBus, EventKind, GestureEvent
+from ..gestures.events import EventBus, EventKind, GestureEvent, pair_of
 from ..gestures.types import Gesture
 from .base import Effect, EffectContext, EffectState, HookEmitter, ModeController
 from .compositing import overlay_rgba
@@ -34,7 +34,6 @@ if TYPE_CHECKING:
 
 Point = tuple[float, float]
 PINCHES = (Gesture.PINCH, Gesture.OK)  # OK is a pinch with the other fingers out.
-HANDS = ("Left", "Right")
 
 
 @dataclass(eq=False)
@@ -589,7 +588,7 @@ class BlockBuilder(ModeController):
         self.kind_index = 0
         self._grabs: dict[str, Grab] = {}
         self._pinching: dict[str, bool] = {}
-        self._live_beam: Beam | None = None
+        self._live_beams: dict[str, Beam] = {}  # Pair id -> beam being stretched.
         self._last_punch: dict[str, float] = {}
 
     @property
@@ -620,7 +619,7 @@ class BlockBuilder(ModeController):
         """Pinch edges -> grab/spawn/release; drags; two-hand beams; cracks; punches."""
         engine = self.engine
         tracked = engine.tracked_hands()
-        for hand in HANDS:
+        for hand in sorted(set(tracked) | set(self._pinching)):
             pinching = hand in tracked and engine.active(hand) in PINCHES
             was = self._pinching.get(hand, False)
             point = engine.position(hand)
@@ -631,7 +630,10 @@ class BlockBuilder(ModeController):
             elif pinching and point is not None and engine.visible(hand):
                 self._pinch_move(hand, point, ctx)
             self._pinching[hand] = pinching
-        self._try_connect(ctx)
+            if not pinching and hand not in tracked:
+                del self._pinching[hand]
+        for both in engine.tracked_pairs():
+            self._try_connect(both, ctx)
         self._update_cracks(ctx)
         self._update_punches(ctx)
 
@@ -678,25 +680,28 @@ class BlockBuilder(ModeController):
         if grab.beam is not None:
             grab.beam.holders.discard(hand)
             grab.beam.moved()
-            if grab.beam is self._live_beam:
-                self._finish_beam(ctx)
+            for both, beam in list(self._live_beams.items()):
+                if grab.beam is beam:
+                    self._finish_beam(both, ctx)
 
-    def _can_connect(self) -> bool:
-        """Both hands pinch, each empty-handed or holding the block it just spawned."""
-        if self._live_beam is not None or not all(self._pinching.get(h) for h in HANDS):
+    def _can_connect(self, both: str) -> bool:
+        """Both of one person's hands pinch, each empty-handed or holding the block it just spawned."""
+        hands = pair_of(both)
+        if both in self._live_beams or not all(self._pinching.get(h) for h in hands):
             return False
         return all(g is None or (g.block is not None and g.block.fresh)
-                   for g in (self._grabs.get(hand) for hand in HANDS))
+                   for g in (self._grabs.get(hand) for hand in hands))
 
-    def _try_connect(self, ctx: EffectContext) -> None:
+    def _try_connect(self, both: str, ctx: EffectContext) -> None:
         """Pinches touching -> the fresh blocks fuse into a live beam held at both ends."""
-        if not self._can_connect():
+        if not self._can_connect(both):
             return
-        grabs = [self._grabs.get(hand) for hand in HANDS]
-        points = [self.engine.position(hand) for hand in HANDS]
+        hands = pair_of(both)
+        grabs = [self._grabs.get(hand) for hand in hands]
+        points = [self.engine.position(hand) for hand in hands]
         if any(p is None for p in points):
             return
-        scale = (self.engine.hand_scale("Left") + self.engine.hand_scale("Right")) / 2
+        scale = (self.engine.hand_scale(hands[0]) + self.engine.hand_scale(hands[1])) / 2
         gap = hypot(points[0][0] - points[1][0], points[0][1] - points[1][1])
         if gap > self.config.beam_connect_distance * scale:
             return
@@ -704,19 +709,19 @@ class BlockBuilder(ModeController):
             if grab is not None and grab.block is not None:
                 self.world.remove_block(grab.block, debris=False)
         beam = self.world.add_beam(points[0], points[1], scale * self.config.beam_thickness, ctx.now)
-        for hand, part in zip(HANDS, ("p1", "p2")):
+        for hand, part in zip(hands, ("p1", "p2")):
             self._grabs[hand] = Grab(beam=beam, part=part, last=np.asarray(self.engine.position(hand)))
             beam.holders.add(hand)
-        self._live_beam = beam
+        self._live_beams[both] = beam
         middle = ((points[0][0] + points[1][0]) / 2, (points[0][1] + points[1][1]) / 2)
         ctx.particles.sparks.emit_radial(70, middle, (scale * 2, scale * 7), (0.2, 0.5), (1.5, 3.0))
         self.manager.screen.flash(0.15)
         self.manager.hooks.emit("beam_connect", position=middle)
 
-    def _finish_beam(self, ctx: EffectContext) -> None:
+    def _finish_beam(self, both: str, ctx: EffectContext) -> None:
         """First hand released: place the beam (or let a too-short one fizzle)."""
-        beam, self._live_beam = self._live_beam, None
-        scale = max(self.engine.hand_scale(h) for h in HANDS) or 100.0
+        beam = self._live_beams.pop(both)
+        scale = max(self.engine.hand_scale(h) for h in pair_of(both)) or 100.0
         if beam.length >= self.config.beam_min_length * scale:
             beam.placed = True
             self.world.wake()
@@ -737,7 +742,7 @@ class BlockBuilder(ModeController):
         """
         c = self.config
         targeted: set[int] = set()
-        for hand in HANDS:
+        for hand in self.engine.tracked_hands():
             if not (self.engine.is_active(hand, Gesture.POINT) and self.engine.visible(hand)):
                 continue
             pad = c.block_pick_pad * 0.5 * self.engine.hand_scale(hand)
@@ -755,7 +760,7 @@ class BlockBuilder(ModeController):
     def _update_punches(self, ctx: EffectContext) -> None:
         """A fist moving fast through a block smashes it at once."""
         c = self.config
-        for hand in HANDS:
+        for hand in self.engine.tracked_hands():
             if not self.engine.visible(hand) or Gesture.FIST not in (self.engine.raw(hand),
                                                                      self.engine.active(hand)):
                 continue
@@ -778,9 +783,9 @@ class BlockBuilder(ModeController):
             if grab.beam is not None:
                 grab.beam.holders.discard(hand)
                 grab.beam.moved()
-        if self._live_beam is not None:
-            self.world.remove_beam(self._live_beam)
-            self._live_beam = None
+        for beam in self._live_beams.values():
+            self.world.remove_beam(beam)
+        self._live_beams.clear()
 
     def on_detach(self) -> None:
         """Leaving BLOCKS drops held blocks and cancels an unfinished beam; the build stays."""
@@ -794,7 +799,7 @@ class BlockBuilder(ModeController):
         engine = self.engine
         color = self.config.beam_color
         points = {}
-        for hand in HANDS:
+        for hand in engine.tracked_hands():
             if not engine.visible(hand):
                 continue
             features = engine.features(hand)
@@ -815,14 +820,20 @@ class BlockBuilder(ModeController):
                 for dx, dy in ((1, 0), (0, 1)):
                     cv2.line(frame, (t[0] - 10 * dx, t[1] - 10 * dy), (t[0] + 10 * dx, t[1] + 10 * dy),
                              (255, 255, 255), 2, cv2.LINE_AA)
-        if len(points) == 2 and self._can_connect():
-            a = np.asarray(points["Left"]); b = np.asarray(points["Right"])
-            length = float(hypot(*(b - a)))
-            segments = max(2, int(length / 18))
-            for i in range(0, segments, 2):
-                p1 = a + (b - a) * i / segments
-                p2 = a + (b - a) * min(1.0, (i + 1) / segments)
-                cv2.line(frame, (int(p1[0]), int(p1[1])), (int(p2[0]), int(p2[1])), color, 2, cv2.LINE_AA)
-            middle = ((a + b) / 2).astype(int)
-            cv2.putText(frame, "touch pinches to connect", (int(middle[0]) - 95, int(middle[1]) - 14),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
+        for both in engine.tracked_pairs():
+            left, right = pair_of(both)
+            if left in points and right in points and self._can_connect(both):
+                self._render_connect_hint(frame, np.asarray(points[left]), np.asarray(points[right]), color)
+
+    @staticmethod
+    def _render_connect_hint(frame: np.ndarray, a: np.ndarray, b: np.ndarray, color: tuple[int, int, int]) -> None:
+        """Dashed line between one person's pinches: touch them to make a beam."""
+        length = float(hypot(*(b - a)))
+        segments = max(2, int(length / 18))
+        for i in range(0, segments, 2):
+            p1 = a + (b - a) * i / segments
+            p2 = a + (b - a) * min(1.0, (i + 1) / segments)
+            cv2.line(frame, (int(p1[0]), int(p1[1])), (int(p2[0]), int(p2[1])), color, 2, cv2.LINE_AA)
+        middle = ((a + b) / 2).astype(int)
+        cv2.putText(frame, "touch pinches to connect", (int(middle[0]) - 95, int(middle[1]) - 14),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1, cv2.LINE_AA)

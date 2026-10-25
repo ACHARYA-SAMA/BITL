@@ -316,8 +316,11 @@ class JutsuTests(unittest.TestCase):
         self.assertIn("lightning_start", self.scene.names())
         effects = [e for e in self.scene.manager.effects if isinstance(e, ChidoriEffect)]
         self.assertEqual(len(effects), 1)
-        main_bolts = [b for b in effects[0].bolts if len(b) == 2 ** EFFECTS.chidori_depth + 1]
+        # One full-brightness main channel per lash, each with dimmer side branches.
+        main_bolts = [points for points, brightness in effects[0].bolts
+                      if brightness == 1.0 and len(points) == 2 ** EFFECTS.chidori_depth + 1]
         self.assertTrue(6 <= len(main_bolts) <= 10)
+        self.assertTrue(any(brightness < 1.0 for _, brightness in effects[0].bolts))
         self.assertNotIn("fireball_summon", self.scene.names())  # The open palm stayed Chidori.
         self.scene.run(10, make_hand("fist", offset=(0, 40)))
         self.assertIn("lightning_end", self.scene.names())
@@ -578,7 +581,10 @@ class HookAndBudgetTests(unittest.TestCase):
             scene.manager.post(canvas)
             times.append(time.perf_counter() - start)
         median = sorted(times[30:])[60] * 1000
-        self.assertLess(median, 8.0, f"median {median:.2f} ms")
+        # Was 8 ms when detection shared the render thread. Hand detection now runs
+        # on its own thread (pipeline.py), and the budget pays for the light pass:
+        # flame field, heat haze, bloom and light spill.
+        self.assertLess(median, 11.0, f"median {median:.2f} ms")
 
 
 if __name__ == "__main__":

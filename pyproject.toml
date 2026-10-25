@@ -10,6 +10,8 @@ readme = "README.md"
 requires-python = ">=3.10,<3.13"
 dependencies = [
   "numpy>=1.26,<2.0",
+  "cryptography>=42,<47",
+  "av>=14,<17",
   "mediapipe==0.10.31; platform_system != 'Darwin' or platform_machine != 'x86_64'",
   "opencv-python>=4.10,<4.12; platform_system != 'Darwin' or platform_machine != 'x86_64'",
   "mediapipe==0.10.21; platform_system == 'Darwin' and platform_machine == 'x86_64'",
@@ -26,3 +28,6 @@ ar-hands = "ar_hands.app:main"
 [tool.setuptools.packages.find]
 include = ["ar_hands*"]
 exclude = ["tests*"]
+
+[tool.setuptools.package-data]
+ar_hands = ["web/*.html"]

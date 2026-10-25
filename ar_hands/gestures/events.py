@@ -13,6 +13,35 @@ from .types import Gesture
 
 LOGGER = logging.getLogger(__name__)
 BOTH = "Both"
+# Hand ids: the first person's hands are "Left"/"Right" and their pair is "Both";
+# person 2 is "Left 2"/"Right 2"/"Both 2", and so on (see identity.py).
+
+
+def person_of(hand: str) -> int:
+    """1 for "Left"/"Right"/"Both", 2 for "Left 2", ..."""
+    _, _, number = hand.rpartition(" ")
+    return int(number) if number.isdigit() else 1
+
+
+def hand_id(handedness: str, person: int) -> str:
+    """The id of ``person``'s "Left" or "Right" hand."""
+    return handedness if person == 1 else f"{handedness} {person}"
+
+
+def both_of(hand: str) -> str:
+    """The two-hand id of the person this hand (or pair) belongs to."""
+    return hand_id(BOTH, person_of(hand))
+
+
+def pair_of(hand: str) -> tuple[str, str]:
+    """The (left, right) hand ids of this hand's or pair's person."""
+    person = person_of(hand)
+    return hand_id("Left", person), hand_id("Right", person)
+
+
+def is_both(hand: str) -> bool:
+    """True for a two-hand id: "Both", "Both 2", ..."""
+    return hand == BOTH or hand.startswith(BOTH + " ")
 
 
 class EventKind(Enum):
@@ -29,7 +58,7 @@ class GestureEvent:
 
     kind: EventKind
     gesture: Gesture
-    hand: str  # "Left", "Right", or "Both".
+    hand: str  # "Left", "Right", "Both", or another person's "Left 2", "Both 2"...
     position: tuple[float, float]  # Palm center, pinch midpoint, or index tip for POINT.
     duration: float  # Seconds since STARTED.
     confidence: float
@@ -57,7 +86,12 @@ class Subscription:
     def accepts(self, event: GestureEvent) -> bool:
         """Return True if the gesture and hand filters match (kind is checked separately)."""
         return ((self.gesture is None or self.gesture is event.gesture)
-                and (self.hand is None or self.hand == event.hand))
+                and _hand_matches(self.hand, event.hand))
+
+
+def _hand_matches(wanted: str | None, hand: str) -> bool:
+    """A BOTH filter accepts every person's pair, so two-hand moves work for everyone."""
+    return wanted is None or wanted == hand or (wanted == BOTH and is_both(hand))
 
 
 class EventBus:
@@ -132,7 +166,7 @@ class EventBus:
         if seconds is None:
             holds = [s for s in self._subscriptions
                      if s.hold_seconds is not None and s.gesture is gesture
-                     and (s.hand is None or s.hand == hand) and hand in s.armed]
+                     and _hand_matches(s.hand, hand) and hand in s.armed]
             pending = [s.hold_seconds for s in holds if hand not in s.fired]
             if not pending:
                 return 1.0 if holds else 0.0

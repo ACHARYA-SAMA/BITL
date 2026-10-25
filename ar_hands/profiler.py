@@ -16,6 +16,15 @@ STAGE_COLORS = {  # BGR
     "render": (255, 140, 80), "imshow": (120, 120, 200),
 }
 BUDGET_LINES_MS = (33.3, 66.7)  # 30 and 15 FPS guides on the sparkline.
+# Stages that run on the analyzer thread, at the same time as the others (pipeline.py).
+PARALLEL = frozenset({"detect", "segment"})
+
+
+def busy(stage_ms: dict[str, float]) -> float:
+    """Processing time per frame: the slower of the render thread and the analyzer
+    thread, since they overlap (the wait for the camera is not processing)."""
+    render = sum(ms for name, ms in stage_ms.items() if name != "capture" and name not in PARALLEL)
+    return max(render, sum(ms for name, ms in stage_ms.items() if name in PARALLEL))
 
 
 class StageTimer:
@@ -80,8 +89,7 @@ class Profiler:
 
     def busy_ms(self, frames: int = 30) -> float:
         """Mean processing time per frame, excluding the wait for the camera."""
-        average = self.average(frames)
-        return sum(ms for name, ms in average.items() if name != "capture")
+        return busy(self.average(frames))
 
     def _ordered(self, names: Iterable[str]) -> list[str]:
         names = set(names)
@@ -96,9 +104,9 @@ class Profiler:
         for name in self._ordered(self._totals):
             ms = self._totals[name] / self.frames
             lines.append(f"  {name:<9} {ms:7.2f} ms  {100 * ms / total if total else 0:5.1f}%")
-        busy = total - self._totals.get("capture", 0.0) / self.frames
-        lines.append(f"  {'total':<9} {total:7.2f} ms  (processing {busy:.2f} ms = "
-                     f"{1000 / busy if busy > 0 else 0:.0f} FPS achievable)")
+        processing = busy({name: ms / self.frames for name, ms in self._totals.items()})
+        lines.append(f"  {'total':<9} {total:7.2f} ms  (processing {processing:.2f} ms = "
+                     f"{1000 / processing if processing > 0 else 0:.0f} FPS achievable; detection runs alongside)")
         return "\n".join(lines)
 
     def draw(self, frame: np.ndarray) -> None:
