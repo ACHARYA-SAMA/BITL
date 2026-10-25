@@ -14,7 +14,8 @@ import numpy as np
 
 from ar_hands import app as main
 from ar_hands import hand_tracker as tracking
-from ar_hands.camera import fourcc_name
+from ar_hands.camera import CameraState, fourcc_name
+from ar_hands.pipeline import Analysis
 
 
 class TrackerTests(unittest.TestCase):
@@ -48,7 +49,7 @@ class TrackerTests(unittest.TestCase):
         native.close.assert_called_once()
         options = create.call_args.args[0]
         self.assertEqual(options.running_mode, tracking.vision.RunningMode.VIDEO)
-        self.assertEqual(options.num_hands, 2)
+        self.assertEqual(options.num_hands, 6)  # Groups: three people's hands.
         self.assertEqual(options.min_hand_presence_confidence, 0.7)
 
     def test_distance_and_landmark_constants(self):
@@ -154,9 +155,12 @@ class AppTests(unittest.TestCase):
         tracker.__enter__.return_value = tracker
         stream.start.return_value = stream
         stream.read.return_value = FramePacket(np.zeros((80, 120, 3), dtype=np.uint8), 1, 0.)
+        stream.state, stream.fps = CameraState.LIVE, 30.0
+        analysis = lambda frame, tracker, pool=None: Analysis(frame, [], None, 1)
         with patch.object(main, "CameraStream", return_value=stream), patch.object(
             main, "HandTracker", return_value=tracker
-        ), patch.object(app, "process_frame", side_effect=lambda frame, tracker: frame), patch.object(
+        ), patch.object(app, "analyze", side_effect=analysis), patch.object(
+            app, "compose", side_effect=lambda result, fresh=True: result.frame), patch.object(
             cv2, "namedWindow"
         ), patch.object(cv2, "resizeWindow"), patch.object(cv2, "setMouseCallback"), patch.object(
             main, 'ensure_segmenter_model'
@@ -251,10 +255,13 @@ class AppTests(unittest.TestCase):
                 tracker.__enter__.return_value = tracker
                 stream.start.return_value = stream
                 stream.read.return_value = FramePacket(np.zeros((80, 120, 3), np.uint8), 1, 0.)
+                stream.state, stream.fps = CameraState.LIVE, 30.0
                 error = KeyboardInterrupt if interrupt else ValueError('bad frame')
+                analysis = lambda frame, tracker, pool=None: Analysis(frame, [], None, 1)
                 with patch.object(main, "CameraStream", return_value=stream), patch.object(
                     main, "HandTracker", return_value=tracker
-                ), patch.object(app, 'process_frame', side_effect=error), patch.object(
+                ), patch.object(app, 'analyze', side_effect=analysis), patch.object(
+                    app, 'compose', side_effect=error) as compose, patch.object(
                     main, 'ensure_segmenter_model'
                 ), patch.object(main, 'AudioManager', return_value=app.audio), patch.object(
                     cv2, 'resizeWindow'
@@ -269,7 +276,7 @@ class AppTests(unittest.TestCase):
                     else:
                         with self.assertRaisesRegex(main.AppError, "consecutive"):
                             app.run()
-                        self.assertEqual(stream.read.call_count, 3)
+                        self.assertEqual(compose.call_count, 3)
                 stream.stop.assert_called_once()
                 tracker.__exit__.assert_called_once()
                 destroy.assert_called_once()

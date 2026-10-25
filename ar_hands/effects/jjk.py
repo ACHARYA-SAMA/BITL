@@ -17,7 +17,7 @@ import cv2
 import numpy as np
 from ..config import EffectsConfig
 from ..gestures.engine import GestureEngine
-from ..gestures.events import BOTH, EventBus, EventKind, GestureEvent
+from ..gestures.events import BOTH, EventBus, EventKind, GestureEvent, both_of, pair_of
 from ..gestures.features import Finger
 from ..gestures.types import Gesture
 from .base import Effect, EffectContext, EffectState, ModeController
@@ -98,6 +98,7 @@ class CursedOrb(Effect):
     """Blue (attract) or Red (repel), held at the fingertips."""
 
     layer = 34
+    glows = True
 
     def __init__(self, kind: str, owner: str, position: Point, radius: float, now: float) -> None:
         """``kind`` is "blue" or "red"."""
@@ -173,7 +174,16 @@ class CursedOrb(Effect):
                     block.asleep = False
 
     def render(self, frame: np.ndarray, ctx: EffectContext) -> None:
-        """Blue: lens, dark core, cyan rings. Red: lightning, white-hot core, pulses."""
+        """Blue: space bends toward a dark singularity (light cannot make darkness, so
+        this part is drawn on the picture). Red's look is all light, in glow()."""
+        level = self.level(ctx.now)
+        if level <= 0 or self.kind != "blue":
+            return
+        center = (float(self.pos[0]), float(self.pos[1]))
+        self._lens.apply(frame, center, self.radius * 4.5, self.radius * 1.1 * level)
+
+    def glow(self, light: np.ndarray, ctx: EffectContext) -> None:
+        """Blue: halo and spinning rings around the core. Red: lightning, white-hot core, pulses."""
         level = self.level(ctx.now)
         if level <= 0:
             return
@@ -181,22 +191,26 @@ class CursedOrb(Effect):
         r = self.radius
         sprites = ctx.sprites
         if self.kind == "blue":
-            self._lens.apply(frame, center, r * 4.5, r * 1.1 * level)
-            overlay_rgba(frame, sprites.blue_glow, center, r * 7 / sprites.blue_glow.shape[1], 0, 0.8 * level, "add")
-            cv2.circle(frame, (int(center[0]), int(center[1])), max(2, int(r * 0.55 * level)),
-                       (30, 6, 2), -1, cv2.LINE_AA)
+            overlay_rgba(light, sprites.blue_glow, center, r * 7 / sprites.blue_glow.shape[1], 0, 0.8 * level, "add")
             spin = ctx.now * 540
             for k, (ring_r, color) in enumerate(((1.1, (255, 255, 255)), (1.7, (255, 230, 120)), (2.4, (255, 160, 40)))):
-                cv2.ellipse(frame, (int(center[0]), int(center[1])), (int(r * ring_r), int(r * ring_r * 0.85)),
+                cv2.ellipse(light, (int(center[0]), int(center[1])), (int(r * ring_r), int(r * ring_r * 0.85)),
                             spin * (1 + k * 0.4) % 360, 0, 230 - k * 40,
                             tuple(int(c * level) for c in color), max(1, int(r * 0.08)), cv2.LINE_AA)
         else:
-            draw_bolts(frame, self.bolts, RED_BOLTS, (7, 3, 1), level)
+            draw_bolts(light, self.bolts, RED_BOLTS, (7, 3, 1), level)
             pulse = (ctx.now * 1.6) % 1.0
-            cv2.circle(frame, (int(center[0]), int(center[1])), int(r * (1.2 + 2.5 * pulse)),
+            cv2.circle(light, (int(center[0]), int(center[1])), int(r * (1.2 + 2.5 * pulse)),
                        tuple(int(c * (1 - pulse) * level) for c in (60, 60, 255)), max(1, int(r * 0.1)), cv2.LINE_AA)
-            overlay_rgba(frame, sprites.red_glow, center, r * 6 / sprites.red_glow.shape[1], 0, level, "add")
-            overlay_rgba(frame, sprites.white_glow, center, r * 2.2 / sprites.white_glow.shape[1], 0, level, "add")
+            overlay_rgba(light, sprites.red_glow, center, r * 6 / sprites.red_glow.shape[1], 0, level, "add")
+            overlay_rgba(light, sprites.white_glow, center, r * 2.2 / sprites.white_glow.shape[1], 0, level, "add")
+
+    def distort(self, frame: np.ndarray, ctx: EffectContext) -> None:
+        """Blue's singularity: a black core the light around it cannot fill."""
+        level = self.level(ctx.now)
+        if level > 0 and self.kind == "blue":
+            cv2.circle(frame, (int(self.pos[0]), int(self.pos[1])), max(2, int(self.radius * 0.55 * level)),
+                       (30, 6, 2), -1, cv2.LINE_AA)
 
 
 class HollowPurple(Projectile):
@@ -204,10 +218,11 @@ class HollowPurple(Projectile):
 
     name = "hollow_purple"
     layer = 36
+    glows = True
 
-    def __init__(self, position: Point, radius: float, now: float) -> None:
-        """Form between the hands (owner "Both")."""
-        super().__init__(BOTH, position, radius, now)
+    def __init__(self, position: Point, radius: float, now: float, owner: str = BOTH) -> None:
+        """Form between one person's hands (``owner`` is their pair id)."""
+        super().__init__(owner, position, radius, now)
         self.trail: list[tuple[float, float, float, float]] = []  # (x, y, radius, time)
 
     def params(self, ctx: EffectContext) -> FlightParams:
@@ -253,10 +268,15 @@ class HollowPurple(Projectile):
         form = min(1.0, self.age / 0.8)
         center = (float(self.pos[0]), float(self.pos[1]))
         core: Sprite = ctx.sprites.purple_core
-        overlay_rgba(frame, ctx.sprites.purple_glow, center, self.radius * 5 / 128, 0, 0.8 * fade, "add")
         overlay_rgba(frame, core, center, self.radius * 2.4 / core.shape[1] * (0.4 + 0.6 * form),
                      -ctx.now * 120 % 360, fade, "screen")
-        overlay_rgba(frame, ctx.sprites.white_glow, center, self.radius * 1.4 / 64, 0, 0.6 * fade, "add")
+
+    def glow(self, light: np.ndarray, ctx: EffectContext) -> None:
+        """The violet glow it casts (and the white heart of the sphere)."""
+        fade = self.fade(ctx.now, self.params(ctx))
+        center = (float(self.pos[0]), float(self.pos[1]))
+        overlay_rgba(light, ctx.sprites.purple_glow, center, self.radius * 5 / 128, 0, 0.8 * fade, "add")
+        overlay_rgba(light, ctx.sprites.white_glow, center, self.radius * 1.4 / 64, 0, 0.6 * fade, "add")
 
     def _render_trail(self, frame: np.ndarray, ctx: EffectContext) -> None:
         height, width = frame.shape[:2]
@@ -310,7 +330,7 @@ class CursedTechniques(ModeController):
 
     def _summon(self, kind: str, event: GestureEvent) -> None:
         hand = event.hand
-        if hand in self.orbs or BOTH in self.purple.balls:
+        if hand in self.orbs or both_of(hand) in self.purple.balls:
             return
         anchor = self._anchor(kind, hand)
         if anchor is None:
@@ -328,11 +348,12 @@ class CursedTechniques(ModeController):
             self.manager.hooks.emit(f"{kind}_end", hand=event.hand)
 
     def _fire(self, event: GestureEvent) -> None:
-        if BOTH in self.purple.balls and self.purple.balls[BOTH].age > 0.6:
-            self.purple.launch(BOTH, self.engine.velocity_px(event.hand), event.timestamp)
+        both = both_of(event.hand)
+        if both in self.purple.balls and self.purple.balls[both].age > 0.6:
+            self.purple.launch(both, self.engine.velocity_px(event.hand), event.timestamp)
 
     def _cancel(self, event: GestureEvent) -> None:
-        self.purple.dissipate(BOTH, event.timestamp, "fist")
+        self.purple.dissipate(both_of(event.hand), event.timestamp, "fist")
 
     def update(self, ctx: EffectContext) -> None:
         """Track orbs, fuse Blue + Red into Purple, and aim or fire Purple."""
@@ -343,33 +364,34 @@ class CursedTechniques(ModeController):
                 orb.release(ctx.now)
             elif anchor is not None:
                 orb.follow(*anchor)
-        kinds = {orb.kind: orb for orb in self.orbs.values()}
-        if "blue" in kinds and "red" in kinds:
-            blue, red = kinds["blue"], kinds["red"]
-            gap = hypot(*(blue.pos - red.pos))
-            scale = (self.engine.hand_scale(blue.owner) + self.engine.hand_scale(red.owner)) / 2
-            if gap < self.config.purple_fuse_distance * scale:
-                self._fuse(blue, red, scale, ctx)
+        people: dict[str, dict[str, CursedOrb]] = {}
+        for orb in self.orbs.values():
+            people.setdefault(both_of(orb.owner), {})[orb.kind] = orb
+        for both, kinds in people.items():
+            if "blue" in kinds and "red" in kinds:
+                blue, red = kinds["blue"], kinds["red"]
+                gap = hypot(*(blue.pos - red.pos))
+                scale = (self.engine.hand_scale(blue.owner) + self.engine.hand_scale(red.owner)) / 2
+                if gap < self.config.purple_fuse_distance * scale:
+                    self._fuse(both, blue, red, scale, ctx)
         self.purple.prune()
-        purple = self.purple.balls.get(BOTH)
-        if purple is not None:
-            centers = [self.engine.palm_center(h) for h in ("Left", "Right") if self.engine.visible(h)]
-            if not centers:
+        for both, purple in list(self.purple.balls.items()):
+            hands = [h for h in pair_of(both) if self.engine.visible(h)]
+            if not hands:
                 purple.mark_lost(ctx.now)
-            else:
-                middle = (sum(c[0] for c in centers) / len(centers), sum(c[1] for c in centers) / len(centers))
-                purple.follow(middle)
-                speeds = [hypot(*self.engine.velocity(h)) for h in ("Left", "Right") if self.engine.visible(h)]
-                if purple.age > 0.6 and speeds and max(speeds) >= self.config.fireball_throw_speed:
-                    fastest = max(("Left", "Right"), key=lambda h: hypot(*self.engine.velocity(h)))
-                    self.purple.launch(BOTH, self.engine.velocity_px(fastest), ctx.now)
+                continue
+            centers = [self.engine.palm_center(h) for h in hands]
+            purple.follow((sum(c[0] for c in centers) / len(centers), sum(c[1] for c in centers) / len(centers)))
+            fastest = max(hands, key=lambda h: hypot(*self.engine.velocity(h)))
+            if purple.age > 0.6 and hypot(*self.engine.velocity(fastest)) >= self.config.fireball_throw_speed:
+                self.purple.launch(both, self.engine.velocity_px(fastest), ctx.now)
 
-    def _fuse(self, blue: CursedOrb, red: CursedOrb, scale: float, ctx: EffectContext) -> None:
+    def _fuse(self, both: str, blue: CursedOrb, red: CursedOrb, scale: float, ctx: EffectContext) -> None:
         middle = tuple((blue.pos + red.pos) / 2)
         for orb in (blue, red):
             orb.release(ctx.now)
             self.orbs.pop(orb.owner, None)
-        self.purple.hold(BOTH, HollowPurple(middle, scale * self.config.purple_size / 2, ctx.now))
+        self.purple.hold(both, HollowPurple(middle, scale * self.config.purple_size / 2, ctx.now, both))
         self.manager.screen.flash(0.5)
         self.manager.screen.shake(12.0)
         ctx.particles.spirit.emit_radial(160, middle, (scale * 3, scale * 9), (0.2, 0.5), (2.0, 5.0))

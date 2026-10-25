@@ -119,6 +119,11 @@ class Effect(ABC):
     layer = 10
     persistent = False  # Survives EffectManager.clear() (e.g. the block world).
     needs_person = False  # True asks the app to segment the person on frames it is alive.
+    # Light sources (lighting.py): an emissive effect's render() draws into the black
+    # light buffer, which blooms and lights up the scene; it must only add color.
+    # Others draw on the frame and may add light separately in glow() (glows = True).
+    emissive = False
+    glows = False
 
     def __init__(self) -> None:
         """Start in SPAWN with age 0."""
@@ -141,6 +146,12 @@ class Effect(ABC):
     @abstractmethod
     def render(self, frame: np.ndarray, ctx: EffectContext) -> None:
         """Draw onto the BGR frame in place."""
+
+    def glow(self, light: np.ndarray, ctx: EffectContext) -> None:
+        """Add light for a non-emissive effect (set ``glows``); default none."""
+
+    def distort(self, frame: np.ndarray, ctx: EffectContext) -> None:
+        """Bend the camera picture before light is drawn (heat haze, lensing); default none."""
 
     def hit_test(self, center: Point, radius: float) -> bool:
         """Solid effects return True when the circle touches them."""

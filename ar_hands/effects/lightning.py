@@ -17,7 +17,7 @@ import cv2
 import numpy as np
 from ..config import EffectsConfig
 from ..gestures.engine import GestureEngine
-from ..gestures.events import BOTH, EventBus, EventKind, GestureEvent
+from ..gestures.events import EventBus, EventKind, GestureEvent, both_of
 from ..gestures.types import Gesture
 from .base import Effect, EffectContext, EffectState, ModeController
 from .compositing import overlay_rgba
@@ -67,6 +67,65 @@ def branching_bolts(start: Point, targets: list[Point], rng: np.random.Generator
     return bolts
 
 
+Bolt = tuple[np.ndarray, float]  # Polyline and its brightness (main channels 1.0, branches dimmer).
+
+
+def lightning_tree(start: Point, end: Point, rng: np.random.Generator, roughness: float, depth: int,
+                   branches: float = 1.6, generation: int = 0) -> list[Bolt]:
+    """A main channel with recursive side branches, like a real discharge.
+
+    Each branch leaves the channel at a shallow angle, is shorter and dimmer
+    than its parent, and may branch again (two generations)."""
+    main = midpoint_bolt(start, end, rng, roughness, depth)
+    bolts: list[Bolt] = [(main, 1.0 / (1.0 + 1.3 * generation))]
+    if generation >= 2 or len(main) < 5:
+        return bolts
+    direction = np.asarray(end, np.float32) - np.asarray(start, np.float32)
+    for _ in range(int(rng.poisson(branches))):
+        fork = main[int(rng.integers(len(main) // 5, 4 * len(main) // 5))]
+        angle = rng.uniform(0.35, 0.95) * rng.choice((-1, 1))
+        turned = np.array((direction[0] * cos(angle) - direction[1] * sin(angle),
+                           direction[0] * sin(angle) + direction[1] * cos(angle)))
+        tip = fork + turned * rng.uniform(0.18, 0.45)
+        bolts += lightning_tree(tuple(fork), tuple(tip), rng, roughness * 1.1, max(2, depth - 1),
+                                branches * 0.55, generation + 1)
+    return bolts
+
+
+def draw_lightning(light: np.ndarray, bolts: list[Bolt], colors: tuple, width: float, intensity: float) -> None:
+    """Glowing channels into the light buffer: a blurred electric-blue sheath, a
+    cyan body and a white-hot core, each scaled by the bolt's brightness. The
+    wide halo comes from the compositor's bloom."""
+    if not bolts or intensity <= 0:
+        return
+    stacked = np.concatenate([points for points, _ in bolts])
+    pad = int(width * 6) + 6
+    height, frame_width = light.shape[:2]
+    x0 = max(0, int(stacked[:, 0].min()) - pad)
+    y0 = max(0, int(stacked[:, 1].min()) - pad)
+    x1 = min(frame_width, int(stacked[:, 0].max()) + pad)
+    y1 = min(height, int(stacked[:, 1].max()) + pad)
+    if x0 >= x1 or y0 >= y1:
+        return
+    sheath = np.zeros((y1 - y0, x1 - x0, 3), np.uint8)
+    body = np.zeros_like(sheath)
+    halo, middle, core = colors
+    for points, brightness in bolts:
+        line = [np.round(points - (x0, y0)).astype(np.int32).reshape(-1, 1, 2)]
+        level = intensity * brightness
+        scale = 0.55 + 0.45 * brightness  # Branches are thinner.
+        cv2.polylines(sheath, line, False, tuple(min(255, c * level * 0.6) for c in halo),
+                      max(1, int(width * 3.5 * scale)), cv2.LINE_AA)
+        cv2.polylines(body, line, False, tuple(min(255, c * level) for c in middle),
+                      max(1, int(width * 1.6 * scale)), cv2.LINE_AA)
+        cv2.polylines(body, line, False, tuple(min(255, c * min(1.0, level * 1.2)) for c in core),
+                      max(1, int(width * 0.7 * scale)), cv2.LINE_AA)
+    cv2.GaussianBlur(sheath, (0, 0), max(1.0, width * 1.4), dst=sheath)
+    roi = light[y0:y1, x0:x1]
+    cv2.add(roi, sheath, dst=roi)
+    cv2.add(roi, body, dst=roi)
+
+
 def draw_bolts(frame: np.ndarray, bolts: list[np.ndarray], colors: tuple, widths: tuple,
                intensity: float) -> None:
     """Three additive passes: wide blurred blue halo, cyan body, thin white core."""
@@ -94,10 +153,16 @@ def draw_bolts(frame: np.ndarray, bolts: list[np.ndarray], colors: tuple, widths
 
 
 class ChidoriEffect(Effect):
-    """Lightning anchored to one hand's palm, re-randomized every few frames."""
+    """Lightning anchored to one hand's palm, re-randomized every frame.
+
+    A dense crackling ball at the palm, branching bolts that lash outward and
+    to the fingertips, arcs that crawl between the fingers, a strobing flicker
+    with a faint afterimage of the previous discharge, all drawn as light, so
+    it flashes the hand and face blue."""
 
     name = "chidori"
     layer = 40
+    emissive = True
 
     def __init__(self, owner: str, now: float) -> None:
         """Start crackling on ``owner``'s palm."""
@@ -106,7 +171,8 @@ class ChidoriEffect(Effect):
         self.center: Point | None = None
         self.scale = 0.0
         self.tips: tuple[Point, ...] = ()
-        self.bolts: list[np.ndarray] = []
+        self.bolts: list[Bolt] = []
+        self.afterimage: list[Bolt] = []
         self.frames = 0
         self.ending_since: float | None = None
         self.flicker = 1.0
@@ -142,7 +208,9 @@ class ChidoriEffect(Effect):
         if self.frames % max(1, c.chidori_refresh_frames) == 0:
             self._regenerate(ctx)
         self.frames += 1
-        self.flicker = float(ctx.rng.uniform(0.75, 1.0))
+        # Lightning strobes: mostly bright, sometimes a dimmer stroke, now and then a flash.
+        roll = float(ctx.rng.random())
+        self.flicker = 1.45 if roll < 0.07 else float(ctx.rng.uniform(0.62, 1.05))
         count = int(ctx.rng.poisson(160 * ctx.dt * self.intensity(ctx.now, c.chidori_fade_s)))
         ctx.particles.sparks.emit_radial(count, self.center, (self.scale * 2, self.scale * 6),
                                          (0.12, 0.35), (1.2, 2.4), radius=self.scale * 0.4)
@@ -150,26 +218,44 @@ class ChidoriEffect(Effect):
     def _regenerate(self, ctx: EffectContext) -> None:
         c, rng = ctx.config, ctx.rng
         cx, cy = self.center
-        targets = [tip for tip in self.tips]
+        s = self.scale
+        self.afterimage = self.bolts
+        bolts: list[Bolt] = []
+        start = (cx + rng.normal(0, s * 0.05), cy + rng.normal(0, s * 0.05))
+        # Long branching lashes: to the fingertips and out into the air.
+        targets = list(self.tips)
         for _ in range(max(0, c.chidori_bolts - len(targets))):
             angle = rng.uniform(0, 2 * pi)
-            reach = rng.uniform(*c.chidori_reach) * self.scale
+            reach = rng.uniform(*c.chidori_reach) * s
             targets.append((cx + cos(angle) * reach, cy + sin(angle) * reach))
-        start = (cx + rng.normal(0, self.scale * 0.05), cy + rng.normal(0, self.scale * 0.05))
-        self.bolts = branching_bolts(start, targets[:c.chidori_bolts], rng, c.chidori_roughness,
-                                     c.chidori_depth)
+        for target in targets[:c.chidori_bolts]:
+            bolts += lightning_tree(start, target, rng, c.chidori_roughness, c.chidori_depth)
+        # The crackling ball: many short, bright arcs right at the palm.
+        for angle in rng.uniform(0, 2 * pi, 6):
+            reach = rng.uniform(0.3, 0.75) * s
+            end = (cx + cos(angle) * reach, cy + sin(angle) * reach)
+            bolts.append((midpoint_bolt(start, end, rng, 0.35, 3), 0.6))
+        # Arcs crawling between neighbouring fingertips.
+        if len(self.tips) >= 2:
+            for _ in range(3):
+                first = int(rng.integers(0, len(self.tips) - 1))
+                bolts.append((midpoint_bolt(self.tips[first], self.tips[first + 1], rng, 0.32, 4), 0.7))
+        self.bolts = bolts
 
-    def render(self, frame: np.ndarray, ctx: EffectContext) -> None:
-        """Bolts plus a flickering blue-white core glow at the palm."""
+    def render(self, light: np.ndarray, ctx: EffectContext) -> None:
+        """The discharge (and a faint afterimage of the last one) plus the palm's glow."""
         c = ctx.config
         level = self.intensity(ctx.now, c.chidori_fade_s) * self.flicker
         if self.center is None or level <= 0:
             return
-        draw_bolts(frame, self.bolts, c.chidori_colors, c.chidori_widths, level)
+        width = max(1.2, self.scale * 0.022)
+        draw_lightning(light, self.afterimage, c.chidori_colors, width * 0.8, level * 0.3)
+        draw_lightning(light, self.bolts, c.chidori_colors, width, level)
         glow = ctx.sprites.blue_glow
-        overlay_rgba(frame, glow, self.center, self.scale * 2.2 / glow.shape[1] * 2, 0.0, level, "add")
+        # Bloom supplies the big halo: these only mark the hot ball at the palm.
+        overlay_rgba(light, glow, self.center, self.scale * 1.6 / glow.shape[1] * 2, 0.0, 0.4 * min(1.0, level), "add")
         core = ctx.sprites.white_glow
-        overlay_rgba(frame, core, self.center, self.scale * 0.9 / core.shape[1] * 2, 0.0, level, "add")
+        overlay_rgba(light, core, self.center, self.scale * 0.6 / core.shape[1] * 2, 0.0, 0.55 * min(1.0, level), "add")
 
 
 class Chidori(ModeController):
@@ -196,7 +282,7 @@ class Chidori(ModeController):
 
     def _arm(self, event: GestureEvent) -> None:
         # Two fists at once are Susanoo's seal, not two Chidori charges.
-        if event.hand not in self._active and not self.engine.is_active(BOTH, Gesture.TWO_FISTS):
+        if event.hand not in self._active and not self.engine.is_active(both_of(event.hand), Gesture.TWO_FISTS):
             self._armed[event.hand] = None
             self.manager.hooks.emit("chidori_charge", hand=event.hand)
 

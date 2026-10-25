@@ -7,16 +7,17 @@
          └─► two_hand ─► "Both" stabilizer ─► PRAYER / TWO_FISTS ───────────┤
                          separation speed ─► HANDS_APART ───────────────────┘
 
-State is kept per handedness label ("Left"/"Right") plus "Both". Everything is
-plain Python on 21 points per hand: no numpy, no allocations beyond small
-tuples, about 0.1 ms per frame for two hands (see tests/test_gestures.py).
+State is kept per hand id ("Left"/"Right", or "Left 2"... for more people, see
+identity.py) plus one two-hand state per person ("Both", "Both 2"...). Everything
+is plain Python on 21 points per hand: no numpy, no allocations beyond small
+tuples, about 0.05 ms per hand per frame (see tests/test_gestures.py).
 """
 from __future__ import annotations
 from collections.abc import Iterable
 from dataclasses import dataclass, field
 from ..config import GestureConfig
 from ..hand_tracker import HandData
-from .events import BOTH, EventBus, EventKind, GestureEvent
+from .events import BOTH, EventBus, EventKind, GestureEvent, both_of, is_both, pair_of
 from .features import HandFeatures, extract_features
 from .motion import MotionTracker
 from .snap import SnapDetector
@@ -82,7 +83,7 @@ class _Batch:
 
 @dataclass
 class _HandTrack:
-    """Everything the engine remembers about one handedness label."""
+    """Everything the engine remembers about one hand id."""
 
     lifecycle: _Lifecycle
     pinch: SchmittTrigger
@@ -113,8 +114,9 @@ class GestureEngine:
         # Not "bus or EventBus()": a bus with no subscribers yet has len 0 and is falsy.
         self.bus = bus if bus is not None else EventBus()
         self._tracks: dict[str, _HandTrack] = {}
-        self._both = _Lifecycle(BOTH, GestureStabilizer(self.config))
-        self._two = TwoHandTracker(self.config)
+        # One two-hand state per person: "Both" always exists, "Both 2"... while seen.
+        self._boths: dict[str, _Lifecycle] = {BOTH: _Lifecycle(BOTH, GestureStabilizer(self.config))}
+        self._twos: dict[str, TwoHandTracker] = {BOTH: TwoHandTracker(self.config)}
         self.last_events: tuple[GestureEvent, ...] = ()
 
     # ----------------------------------------------------------------- update
@@ -122,17 +124,18 @@ class GestureEngine:
         """Process one frame (perf_counter seconds), dispatch its events, and return them."""
         visible: dict[str, HandData] = {}
         for hand in hands:
-            # The tracker already makes labels unique; keep the most confident
-            # candidate anyway so a duplicate can never merge two hands' state.
-            if hand.handedness not in visible or hand.score > visible[hand.handedness].score:
-                visible[hand.handedness] = hand
+            # Ids are unique already; keep the most confident candidate anyway so a
+            # duplicate can never merge two hands' state.
+            if hand.key not in visible or hand.score > visible[hand.key].score:
+                visible[hand.key] = hand
         batch = _Batch()
         for name, hand in visible.items():
             self._update_hand(name, hand, timestamp, batch)
         for name in tuple(self._tracks):
             if name not in visible:
                 self._update_missing(name, timestamp, batch)
-        self._update_both(timestamp, batch)
+        for both in sorted({both_of(name) for name in self._tracks} | set(self._boths)):
+            self._update_both(both, timestamp, batch)
         events = batch.ordered()
         self.last_events = tuple(events)
         self.bus.dispatch_all(events)
@@ -186,13 +189,20 @@ class GestureEngine:
         if track.lifecycle.stabilizer.lost:
             del self._tracks[name]
 
-    def _update_both(self, t: float, batch: _Batch) -> None:
-        left, right = self._tracks.get("Left"), self._tracks.get("Right")
+    def _update_both(self, both: str, t: float, batch: _Batch) -> None:
+        """One person's two-hand gestures (``both`` is "Both", "Both 2"...)."""
+        lifecycle = self._boths.get(both)
+        if lifecycle is None:
+            lifecycle = self._boths[both] = _Lifecycle(both, GestureStabilizer(self.config))
+            self._twos[both] = TwoHandTracker(self.config)
+        left_id, right_id = pair_of(both)
+        left, right = self._tracks.get(left_id), self._tracks.get(right_id)
         left_features = left.features if left else None
         right_features = right.features if right else None
-        apart = self._two.update(t, left_features, right_features)
-        state = self._two.state
-        stabilizer = self._both.stabilizer
+        two = self._twos[both]
+        apart = two.update(t, left_features, right_features)
+        state = two.state
+        stabilizer = lifecycle.stabilizer
         if left_features is None or right_features is None:
             transition = stabilizer.update_missing()
             if stabilizer.lost:
@@ -202,21 +212,25 @@ class GestureEngine:
                                      self.config)
             confidence = (left.raw_confidence + right.raw_confidence) / 2
             transition = stabilizer.update(raw, confidence if raw is not Gesture.NONE else 0.0)
-        self._both.emit(transition, t, state.midpoint if state.present else None, batch)
+        lifecycle.emit(transition, t, state.midpoint if state.present else None, batch)
         if apart:
-            batch.add_instant(Gesture.HANDS_APART, BOTH, state.midpoint,
+            batch.add_instant(Gesture.HANDS_APART, both, state.midpoint,
                               min(1.0, state.separation_speed / (2 * self.config.apart_speed)), t)
+        if (both != BOTH and left is None and right is None and stabilizer.lost
+                and stabilizer.active is Gesture.NONE):
+            del self._boths[both], self._twos[both]  # That person left.
 
     def reset(self, timestamp: float) -> list[GestureEvent]:
         """End every active gesture with ENDED events (dispatched), then forget all state."""
         batch = _Batch()
-        for lifecycle in [track.lifecycle for track in self._tracks.values()] + [self._both]:
+        for lifecycle in [track.lifecycle for track in self._tracks.values()] + list(self._boths.values()):
             active = lifecycle.stabilizer.active
             lifecycle.stabilizer.reset()  # Before emitting, so no HELD follows the ENDED.
             if active is not Gesture.NONE:
                 lifecycle.emit(Transition(ended=active), timestamp, None, batch)
         self._tracks.clear()
-        self._two.reset()
+        for two in self._twos.values():
+            two.reset()
         events = batch.ordered()
         self.bus.dispatch_all(events)
         return events
@@ -226,8 +240,17 @@ class GestureEngine:
         return self._tracks.get(hand)
 
     def tracked_hands(self) -> tuple[str, ...]:
-        """Single-hand labels with state: visible now or within the lost grace."""
+        """Single-hand ids with state: visible now or within the lost grace."""
         return tuple(self._tracks)
+
+    def tracked_pairs(self) -> tuple[str, ...]:
+        """Two-hand ids ("Both", "Both 2"...) of people with a hand tracked."""
+        return tuple(sorted({both_of(hand) for hand in self._tracks}))
+
+    def two_hands_of(self, both: str) -> TwoHandState:
+        """Continuous two-hand measurements of one person ("Both", "Both 2"...)."""
+        two = self._twos.get(both_of(both))
+        return two.state if two is not None else TwoHandState()
 
     def visible(self, hand: str) -> bool:
         """True if this hand was detected (and measurable) this frame."""
@@ -235,9 +258,10 @@ class GestureEngine:
         return track is not None and track.features is not None
 
     def active(self, hand: str) -> Gesture:
-        """Stable gesture of "Left", "Right", or "Both" (NONE if untracked)."""
-        if hand == BOTH:
-            return self._both.stabilizer.active
+        """Stable gesture of a hand or a pair ("Left", "Both 2"...; NONE if untracked)."""
+        if is_both(hand):
+            lifecycle = self._boths.get(hand)
+            return lifecycle.stabilizer.active if lifecycle else Gesture.NONE
         track = self._track(hand)
         return track.lifecycle.stabilizer.active if track else Gesture.NONE
 
@@ -247,22 +271,26 @@ class GestureEngine:
 
     def raw(self, hand: str) -> Gesture:
         """This frame's unstabilized gesture (NONE while the hand is missing)."""
-        if hand == BOTH:
-            return self._both.stabilizer.winner
+        if is_both(hand):
+            lifecycle = self._boths.get(hand)
+            return lifecycle.stabilizer.winner if lifecycle else Gesture.NONE
         track = self._track(hand)
         return track.raw if track else Gesture.NONE
 
     def confidence(self, hand: str) -> float:
         """Confidence of the active gesture, 0..1."""
-        if hand == BOTH:
-            return self._both.confidence
+        if is_both(hand):
+            lifecycle = self._boths.get(hand)
+            return lifecycle.confidence if lifecycle else 0.0
         track = self._track(hand)
         return track.lifecycle.confidence if track else 0.0
 
     def active_duration(self, hand: str, now: float) -> float:
         """Seconds the active gesture has been held (0 when none)."""
-        if hand == BOTH:
-            lifecycle = self._both
+        if is_both(hand):
+            lifecycle = self._boths.get(hand)
+            if lifecycle is None:
+                return 0.0
         else:
             track = self._track(hand)
             if track is None:
@@ -279,22 +307,24 @@ class GestureEngine:
 
     def position(self, hand: str) -> Point | None:
         """Anchor of the active gesture (see GestureEvent.position)."""
-        if hand == BOTH:
-            return self._both.position if self._two.state.present else None
+        if is_both(hand):
+            lifecycle = self._boths.get(hand)
+            return lifecycle.position if lifecycle and self.two_hands_of(hand).present else None
         track = self._track(hand)
         return track.lifecycle.position if track else None
 
     def palm_center(self, hand: str) -> Point | None:
-        """Last known palm center in pixels ("Both" = midpoint of the palms)."""
-        if hand == BOTH:
-            return self._two.state.midpoint if self._two.state.present else None
+        """Last known palm center in pixels (a pair = midpoint of its palms)."""
+        if is_both(hand):
+            state = self.two_hands_of(hand)
+            return state.midpoint if state.present else None
         track = self._track(hand)
         return track.palm if track else None
 
     def hand_scale(self, hand: str) -> float:
-        """Last known hand scale in pixels ("Both" = mean of the two)."""
-        if hand == BOTH:
-            return self._two.state.scale
+        """Last known hand scale in pixels (a pair = mean of the two)."""
+        if is_both(hand):
+            return self.two_hands_of(hand).scale
         track = self._track(hand)
         return track.scale if track else 0.0
 
@@ -315,13 +345,13 @@ class GestureEngine:
 
     @property
     def two_hands(self) -> TwoHandState:
-        """Continuous two-hand measurements for this frame."""
-        return self._two.state
+        """Person 1's continuous two-hand measurements for this frame."""
+        return self.two_hands_of(BOTH)
 
     @property
     def hands_distance(self) -> float:
-        """Wrist-to-wrist distance in mean hand scales (0 unless both are visible)."""
-        return self._two.state.distance
+        """Person 1's wrist-to-wrist distance in mean hand scales (0 unless both are visible)."""
+        return self.two_hands.distance
 
     def hold_progress(self, hand: str, gesture: Gesture, seconds: float | None = None) -> float:
         """0..1 progress toward an on_hold_for() (or ``seconds``), for progress rings."""

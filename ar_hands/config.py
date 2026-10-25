@@ -338,6 +338,17 @@ class Config:
     # so they silently drop to 10-15 FPS. Empty string keeps the driver default.
     camera_fourcc: str = "MJPG"
     camera_indices: tuple[int, ...] = (0, 1, 2)
+    # A stream URL from a phone webcam app (IP Webcam, DroidCam...), tried instead of the indices.
+    camera_url: str = ""
+    # Phone camera (phone.py): the HTTPS page port (busy ports try the next few up),
+    # silence before the phone counts as disconnected, and upload/view limits.
+    phone_port: int = 8765
+    phone_host: str = "0.0.0.0"  # Checks use 127.0.0.1: loopback never triggers a firewall prompt.
+    phone_timeout_s: float = 2.5
+    phone_max_upload_bytes: int = 4_000_000
+    phone_max_side: int = 1920  # Larger phone frames are rejected; the page sends 1280.
+    phone_view_quality: int = 75  # JPEG quality of the finished picture sent back.
+    phone_fullscreen: bool = True  # A phone held sideways makes the laptop window fullscreen.
     max_read_failures: int = 30  # Consecutive failed reads before the camera counts as lost.
     retry_delay_ms: int = 30
     # A read that has not returned for this long means the driver is stuck (USB
@@ -348,13 +359,15 @@ class Config:
     # 224 px crop anyway, so 0.75 loses little accuracy and saves conversion time.
     detect_scale: float = 0.75
     max_frame_failures: int = 30  # Consecutive frames that raised before the app gives up.
+    # Between camera frames the last one is drawn again so effects animate at this rate.
+    display_fps: float = 60.0
     # Profiler (F10) and adaptive quality.
     profiler_history: int = 120
     show_profiler: bool = False
     adaptive_quality: bool = True
     # Achievable FPS (from processing time, not camera rate: a 15 FPS webcam must
     # not make the app throw away quality it can afford).
-    quality_target_fps: float = 24.0
+    quality_target_fps: float = 40.0  # Phones deliver 30-60 FPS; shed detail before dropping below 40.
     quality_down_after_s: float = 2.0
     quality_up_after_s: float = 5.0
     quality_headroom: float = 1.4  # Step back up only above target x headroom.
@@ -366,7 +379,7 @@ class Config:
     record_folder: str = "recordings"
     record_queue: int = 48  # Frames buffered for the writer thread.
     menu: MenuTheme = field(default_factory=MenuTheme)
-    num_hands: int = 2
+    num_hands: int = 6  # Groups of friends: three people's hands at once.
     detection_confidence: float = 0.7
     presence_confidence: float = 0.7
     tracking_confidence: float = 0.7

@@ -18,6 +18,7 @@ import tempfile
 LOGGER = logging.getLogger(__name__)
 SETTINGS_VERSION = 1
 MODES = ("Draw", "Jutsu", "Blocks", "Jujutsu")
+CAMERA_SOURCES = ("Webcam", "Phone")
 
 
 @dataclass
@@ -37,12 +38,16 @@ class Settings:
     fullscreen: bool = False
     record_clean: bool = False
     adaptive_quality: bool = True
+    camera_source: str = "Webcam"  # "Phone" streams from the phone page (phone.py).
+    max_hands: int = 6  # Hands tracked at once; fewer is a little faster.
     onboarded: bool = False
 
 
 # Field -> (allowed values) for choices, or (low, high) for numbers.
 LIMITS: dict[str, tuple] = {
     "mode": MODES,
+    "camera_source": CAMERA_SOURCES,
+    "max_hands": (2, 8),
     "color_index": (0, 6),
     "thickness": (2, 30),
     "volume": (0.0, 1.0),

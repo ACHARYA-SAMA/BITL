@@ -1,5 +1,6 @@
 """Application orchestration and desktop controls."""
 from __future__ import annotations
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 import logging
 import sys
@@ -11,6 +12,9 @@ from . import AppError
 from .actions import Action
 from .config import Config
 from .camera import open_camera, CameraStream, CameraState
+from .phone import PhoneCamera
+from .identity import HandIdentities
+from .pipeline import Analysis, FrameAnalyzer, fast_timer
 from .desktop import DesktopControls
 from .audio import AudioManager
 from .cli import parser, build_config, RunOptions
@@ -38,7 +42,7 @@ from .effects.jjk import CursedTechniques
 from .effects.domains import DomainCaster
 from .effects.sprites import SpriteLibrary
 from .gestures.engine import GestureEngine
-from .gestures.events import BOTH, EventBus
+from .gestures.events import EventBus
 from .gestures.types import Gesture
 
 # cv2.waitKeyEx codes for F1..F7 on Windows, GTK (Linux), Cocoa (macOS), and Qt builds.
@@ -56,6 +60,10 @@ MODE_HINTS = {
 }
 HOOK_TOASTS = {"blocks_clear": "Blocks cleared", "beam_place": "Beam placed",
                "jutsu_seal": "Seal formed: pull your hands apart!"}
+PHONE_ACTIONS = {"color": Action.NEXT_COLOR, "undo": Action.UNDO, "redo": Action.REDO,
+                 "clear": Action.CLEAR, "save": Action.SAVE_PNG}
+# Phone buttons that work on top of the menu or guide; any other button closes it first.
+OVERLAY_COMMANDS = frozenset({"menu", "guide", "record", "mute"})
 
 
 class App(DesktopControls):
@@ -106,6 +114,10 @@ class App(DesktopControls):
                                  (switcher, opener), self.effects.hooks)
         self._draw_gestures = self.draw_mode.draw_gestures
         self._ctx: EffectContext | None = None
+        self.identities = HandIdentities(duplicate_ratio=c.duplicate_hand_ratio)
+        self._cursors: list[Cursor] = []
+        self._want_mask = False  # Set by the renderer, read by the analyzer thread.
+        self._reset_identities = False
         self.effects.hooks.subscribe(self._on_hook)
         self.setup_desktop(settings, store, options)
         self.switch_mode(Mode(self.options.mode or self.settings.mode))
@@ -145,7 +157,8 @@ class App(DesktopControls):
     def perform(self, action: Action, from_gesture: bool = False) -> None:
         """Run one action; keys and gesture bindings share this single code path."""
         if action is Action.CLEAR:
-            if from_gesture and self.gestures.active(BOTH) is Gesture.TWO_PALMS:
+            if from_gesture and any(self.gestures.active(both) is Gesture.TWO_PALMS
+                                    for both in self.gestures.tracked_pairs()):
                 return  # Two palms belong to the menu, never the single-palm clear action.
             if from_gesture and self._drawing_now():
                 # One hand drawing while the other rests open is normal; it must
@@ -189,61 +202,112 @@ class App(DesktopControls):
 
     def _update_interaction(self, hands: list[HandData], now: float,
                             size: tuple[int, int] | None = None, camera: np.ndarray | None = None,
-                            person: np.ndarray | None = None) -> list[Cursor]:
-        """Gestures (whose actions run during dispatch), effects and modes, then the pen."""
+                            person: np.ndarray | None = None, fresh: bool = True) -> list[Cursor]:
+        """Gestures (whose actions run during dispatch), effects and modes, then the pen.
+
+        ``fresh`` is False when re-rendering the last camera frame between camera
+        frames: effects keep animating, but gestures and pens only advance on new
+        detections (their timing counts frames, and a hand seen twice has not moved)."""
         dt = 0.0 if self._last_time is None else now - self._last_time
         self._last_time = now
         # Effects dispatched by gesture callbacks need THIS frame's anchors/mask.
         self.effects.context(now, dt, hands, size=size, camera=camera, person=person, background=self.background)
-        with self.profiler.stage('gestures'):
-            events = self.gestures.update(hands, now)
-        self.debug.record(events)
+        events = []
+        if fresh:
+            with self.profiler.stage('gestures'):
+                events = self.gestures.update(hands, now)
+            self.debug.record(events)
         with self.profiler.stage('effects'):
             self._ctx = self.effects.update(dt, hands, events, now, size, camera, person, self.background)
             self.modes.update(self._ctx)
         if self.overlay_open:
             self.pen.reset(self.canvas)
+            self._cursors = []
             return []
+        if not fresh:
+            return self._cursors
         drawing = self.modes.mode is Mode.DRAW and not self.snap.active
         signals = pen_signals(self.gestures, self._draw_gestures) if drawing else {}
-        return self.pen.update(hands if drawing else [], self.canvas, now, self.brush_color, self.thickness, signals)
+        self._cursors = self.pen.update(hands if drawing else [], self.canvas, now, self.brush_color,
+                                        self.thickness, signals)
+        return self._cursors
 
-    def process_frame(self, frame: np.ndarray, tracker: HandTracker) -> np.ndarray:
-        """Mirror, detect, recognize gestures, run effects and pens, then composite."""
+    def analyze(self, frame: np.ndarray, tracker: HandTracker,
+                segmenting: ThreadPoolExecutor | None = None) -> Analysis:
+        """Mirror, detect and identify hands, and segment the person when effects need it.
+
+        Runs on the analyzer thread in run(); the segmenter works in parallel
+        with the hand tracker when a pool is given. Only state that this thread
+        owns is written here (timestamps, hand ids)."""
         # Flip BEFORE detection: MediaPipe handedness assumes a mirrored selfie
         # view. This also keeps Left/Right labels and rendered coordinates aligned.
         cv2.flip(frame, 1, dst=frame)
         timestamp = self.next_timestamp()
-        with self.profiler.stage('detect'):
-            hands = tracker.detect(frame, timestamp)
-        now = time.perf_counter()
-        if self._frame_shape is not None and self._frame_shape != frame.shape:
-            self.pen.reset(self.canvas)
-            self.background.reset()
-            if self.snap.active:
-                # The snap captured a full-resolution ghost. A reconnected
-                # camera may have a different size; restore the live person.
-                self.snap.effect.kill()
-                self.effects.particles.dust.clear()
-        self._frame_shape = frame.shape
-        self._frame_number += 1
+        timings: dict[str, float] = {}
+        mask_job = None
+        start = time.perf_counter()
+        if self._want_mask and segmenting is not None:
+            mask_job = segmenting.submit(self.segmenter.mask, frame, timestamp)
+        hands = tracker.detect(frame, timestamp)
+        timings['detect'] = (time.perf_counter() - start) * 1000
+        if self._reset_identities:
+            self._reset_identities = False
+            self.identities.reset()
+        hands = self.identities.assign(hands, time.perf_counter())
         person = None
-        needs_mask = self.effects.wants_person or (self.modes.mode is Mode.DRAW and
-                     self._frame_number % self.config.background_every_frames == 0)
-        with self.profiler.stage('segment'):
-            if needs_mask:
-                person = self.segmenter.mask(frame, timestamp)
-                if person is not None and not self.snap.active:
-                    self.background.update(frame, person)
-        camera = frame.copy() if person is not None or self.effects.wants_person else None
-        cursors = self._update_interaction(hands, now, frame.shape[1::-1], camera, person)
+        if mask_job is not None:
+            person = mask_job.result()
+        elif self._want_mask:
+            start = time.perf_counter()
+            person = self.segmenter.mask(frame, timestamp)
+            timings['segment'] = (time.perf_counter() - start) * 1000
+        return Analysis(frame, hands, person, timestamp, timings)
+
+    def process_frame(self, frame: np.ndarray, tracker: HandTracker) -> np.ndarray:
+        """Mirror, detect, recognize gestures, run effects and pens, then composite."""
+        self._want_mask = self._needs_mask(self._frame_number + 1)
+        return self.compose(self.analyze(frame, tracker))
+
+    def _needs_mask(self, frame_number: int) -> bool:
+        """Person mask wanted: effects use it, or Draw mode is learning the background."""
+        return self.effects.wants_person or (self.modes.mode is Mode.DRAW and
+                                             frame_number % self.config.background_every_frames == 0)
+
+    def compose(self, analysis: Analysis, fresh: bool = True) -> np.ndarray:
+        """Run interaction and draw everything onto a copy of the analyzed frame.
+
+        With ``fresh`` False the same camera frame is drawn again: effects move
+        on, so the picture stays smooth at the display rate even when the camera
+        delivers fewer frames."""
+        frame = analysis.frame.copy()
+        hands, person = analysis.hands, analysis.person
+        now = time.perf_counter()
+        if fresh:
+            for stage, ms in analysis.timings.items():
+                self.profiler.add(stage, ms)
+            if self._frame_shape is not None and self._frame_shape != frame.shape:
+                self.pen.reset(self.canvas)
+                self.background.reset()
+                if self.snap.active:
+                    # The snap captured a full-resolution ghost. A reconnected
+                    # camera may have a different size; restore the live person.
+                    self.snap.effect.kill()
+                    self.effects.particles.dust.clear()
+            self._frame_shape = frame.shape
+            self._frame_number += 1
+            if person is not None and not self.snap.active:
+                self.background.update(analysis.frame, person)
+            self._want_mask = self._needs_mask(self._frame_number + 1)
+        camera = analysis.frame if person is not None or self.effects.wants_person else None
+        cursors = self._update_interaction(hands, now, frame.shape[1::-1], camera, person, fresh)
         if self.overlay_open:
             self.overlay_input(hands, now, frame.shape[1::-1])
-        # Additive light leaves the camera visible through the soft neon halo.
+        # The neon drawing is light: it joins the effects' light buffer, so strokes
+        # bloom and tint the hand and face with their color (effects/lighting.py).
         with self.profiler.stage('canvas'):
-            cv2.add(frame, self.canvas.render(frame.shape), dst=frame)
+            neon = self.canvas.render(frame.shape) if self.canvas.finished or self.canvas.active else None
         with self.profiler.stage('effects'):
-            self.effects.render(frame)
+            self.effects.render(frame, neon)
             self.modes.render(frame, self._ctx)
         render_start = time.perf_counter()
         if self.show_skeleton and not self.snap.active:
@@ -259,7 +323,7 @@ class App(DesktopControls):
         if self.show_hud:
             self.hud.show_indices = self.renderer.show_indices
             self.hud.glow = self.renderer.glow
-            self._draw_hud(frame, fps, len(hands))
+            self._draw_hud(frame, fps, hands)
         self.hud.draw_banner(frame, self.modes.mode.value.upper(),
                              (now - self.modes.changed_at) / self.config.effects.mode_banner_s)
         if self._toast is not None:
@@ -274,7 +338,7 @@ class App(DesktopControls):
         self.profiler.add('render', (time.perf_counter() - render_start) * 1000)
         return frame
 
-    def _draw_hud(self, frame: np.ndarray, fps: float, hand_count: int) -> None:
+    def _draw_hud(self, frame: np.ndarray, fps: float, hands: list[HandData]) -> None:
         mode = self.modes.mode
         status, icon = None, None
         gestures = self._gesture_status()
@@ -287,16 +351,19 @@ class App(DesktopControls):
             status = (f"      {kind.replace('_', ' ').title()}  |  Blocks "
                       f"{len(self.world.live_blocks)}/{self.config.effects.max_blocks}  Beams "
                       f"{len(self.world.beams)}  |  {gestures or 'Pinch to place a block'}")
-        self.hud.draw(frame, fps, hand_count, self.color_index, self.thickness,
+        people = len({hand.key.rpartition(" ")[2] for hand in hands})
+        camera_fps = self.stream.fps if self.stream is not None else 0.0
+        self.hud.draw(frame, fps, len(hands), self.color_index, self.thickness,
                       self.canvas.fade_enabled, len(self.canvas.finished), gestures,
-                      mode.value, status, icon, MODE_HINTS[mode])
+                      mode.value, status, icon, MODE_HINTS[mode], camera_fps, people)
 
     def _gesture_status(self) -> str:
         parts = [f"{hand} {self.gestures.active(hand).name.replace('_', ' ').lower()}"
                  for hand in sorted(self.gestures.tracked_hands(), reverse=True)
                  if self.gestures.active(hand) is not Gesture.NONE]
-        if self.gestures.active(BOTH) is not Gesture.NONE:
-            parts.append(f"both {self.gestures.active(BOTH).name.replace('_', ' ').lower()}")
+        for both in self.gestures.tracked_pairs():
+            if self.gestures.active(both) is not Gesture.NONE:
+                parts.append(f"{both.lower()} {self.gestures.active(both).name.replace('_', ' ').lower()}")
         return "  ".join(parts)
 
     def _draw_hold_rings(self, frame: np.ndarray) -> None:
@@ -304,7 +371,7 @@ class App(DesktopControls):
         if self._drawing_now():
             return  # Holds are ignored while drawing, so do not promise one.
         for gesture, seconds in self.modes.hold_rings():
-            for hand in (*self.gestures.tracked_hands(), BOTH):
+            for hand in (*self.gestures.tracked_hands(), *self.gestures.tracked_pairs()):
                 if not self.gestures.is_active(hand, gesture):
                     continue
                 progress = self.gestures.hold_progress(hand, gesture, seconds)
@@ -390,6 +457,9 @@ class App(DesktopControls):
             self.audio.toggle_mute()
             self.save_settings()
             return True
+        if name.lower() == 'o':
+            self.menu_change('camera_source', 'Webcam' if self.camera_source == 'Phone' else 'Phone')
+            return True
         if name.lower() == 'b':
             self.background.reset()
             self.toast('Background reset: step aside briefly to learn the empty scene')
@@ -441,6 +511,107 @@ class App(DesktopControls):
         self.save_settings()
         return not self._quit
 
+    def _open_stream(self) -> CameraStream | PhoneCamera:
+        """Start the selected camera: the phone page, or the webcam with its fallbacks."""
+        if self.camera_source == 'Phone':
+            return PhoneCamera(self.config).start()
+        return CameraStream(self.config, opener=lambda c: self.open_camera()).start()
+
+    def set_camera_source(self, source: str) -> None:
+        """Switch between the webcam and the phone; while running, the stream swaps now."""
+        if source == self.camera_source:
+            return
+        self.camera_source = source
+        self._phone_live = False
+        self._auto_fullscreen(False)
+        if self.stream is not None:
+            self.stream.stop()
+            self.stream = self._open_stream()
+        self._reset_identities = True
+        self.toast('Phone camera: scan the QR code with your phone' if source == 'Phone' else 'Laptop webcam')
+
+    def phone_command(self, name: str, value: str | None = None) -> None:
+        """A button on the phone page; it runs through the same paths as keys and menu items."""
+        if self.overlay_open and name not in OVERLAY_COMMANDS:
+            self.close_overlay()
+        if name == 'mode' and value in {mode.value for mode in Mode}:
+            self.menu_change('mode', value)
+        elif name in PHONE_ACTIONS:
+            self.perform(PHONE_ACTIONS[name])
+        elif name == 'snap' and self.modes.mode is Mode.DRAW:
+            self.snap.trigger(time.perf_counter())
+        elif name == 'record':
+            self.toggle_recording()
+        elif name == 'mute':
+            self.audio.toggle_mute()
+        elif name == 'background':
+            self.background.reset()
+            self.toast('Background reset: step aside briefly to learn the empty scene')
+        elif name in ('menu', 'guide'):
+            showing = self.menu.visible if name == 'menu' else self.guide.visible
+            if showing:
+                self.close_overlay()
+            elif name == 'menu':
+                self.open_menu()
+            else:
+                self.open_guide()
+        self.save_settings()
+
+    def _phone_input(self, stream: CameraStream | PhoneCamera) -> None:
+        """Apply the phone page's buttons and its touches on the menu or guide."""
+        if not isinstance(stream, PhoneCamera):
+            return
+        live = stream.state is CameraState.LIVE
+        if live and not self._phone_live and stream.size is not None:
+            self.toast(f'Phone camera connected ({stream.size[0]}x{stream.size[1]})')
+        self._phone_live = live
+        self._auto_fullscreen(live and stream.size is not None and stream.size[0] >= stream.size[1])
+        for command in stream.commands():
+            self.phone_command(command.name, command.value)
+        self._touches.extend(stream.pointer_events())
+        if self.window is None or self._frame_shape is None:
+            self._touches.clear()
+            return
+        height, width = self._frame_shape[:2]
+        mouse = self.window.mouse
+        while self._touches:
+            touch = self._touches.popleft()
+            changed = touch.down != mouse.pressed
+            mouse.position = (touch.x * (width - 1), touch.y * (height - 1))
+            mouse.pressed, mouse.moved_at = touch.down, time.perf_counter()
+            if changed:
+                break  # The menu samples the button once per frame: a quick tap needs two frames.
+
+    def _auto_fullscreen(self, landscape: bool) -> None:
+        """A phone held sideways fills the laptop screen; turning it upright (or the
+        phone leaving) returns to the saved choice. Only these changes toggle it, so
+        Shift+F still works while the phone stays sideways."""
+        if self.window is None or not self.config.phone_fullscreen or landscape == self._phone_landscape:
+            return
+        self._phone_landscape = landscape
+        wanted = landscape or self.settings.fullscreen
+        if wanted != self.window.fullscreen:
+            self.window.set_fullscreen(wanted)
+
+    def _phone_state(self) -> dict[str, object]:
+        """What the phone page shows natively: its mode tabs, REC, sound and color buttons."""
+        blue, green, red = self.brush_color
+        return {'mode': self.modes.mode.value, 'recording': self.recorder.active or self._pending_record,
+                'muted': self.audio.muted, 'audio': self.audio.available,
+                'overlay': 'menu' if self.menu.visible else 'guide' if self.guide.visible else '',
+                'color': f'#{red:02x}{green:02x}{blue:02x}', 'fps': round(self.fps.value)}
+
+    def _waiting_frame(self, stream: CameraStream | PhoneCamera) -> np.ndarray:
+        """No camera picture: the pairing screen for the phone, a reconnect notice for the webcam."""
+        frame = np.zeros((self.config.height, self.config.width, 3), np.uint8)
+        if isinstance(stream, PhoneCamera):
+            self.pairing.render(frame, stream, time.perf_counter())
+        else:
+            self.hud.draw_toast(frame, 'Camera lost, reconnecting... O phone camera / TAB settings / Q quit')
+        self.menu.render(frame)
+        self.guide.render(frame)
+        return frame
+
     def _window_open(self) -> bool:
         try:
             return cv2.getWindowProperty(self.config.window_name, cv2.WND_PROP_VISIBLE) >= 1
@@ -449,8 +620,12 @@ class App(DesktopControls):
 
     def run(self) -> None:
         """Keep the UI responsive during slow capture, camera loss and recoverable frame errors."""
+        with fast_timer(), ThreadPoolExecutor(1, thread_name_prefix='segment') as segmenting:
+            self._run(segmenting)
+
+    def _run(self, segmenting: ThreadPoolExecutor) -> None:
         logger = logging.getLogger(__name__)
-        stream = None
+        analyzer: FrameAnalyzer | None = None
         try:
             with HandTracker(self.config) as tracker:
                 self._tracker = tracker
@@ -465,47 +640,65 @@ class App(DesktopControls):
                                      self.settings.fullscreen)
                 if not self.settings.onboarded:
                     self.open_guide(onboarding=True)
-                stream = CameraStream(self.config, opener=lambda c: self.open_camera()).start()
+                self.stream = self._open_stream()
+                analyzer = FrameAnalyzer(lambda frame: self.analyze(frame, tracker, segmenting)).start()
                 failures = 0
+                last: Analysis | None = None
                 last_frame: np.ndarray | None = None
+                last_render = 0.0
+                tick = 1.0 / self.config.display_fps
                 while not self._quit and self.window.is_open():
-                    with self.profiler.stage('capture'):
-                        packet = stream.read(timeout=.015)
+                    stream = self.stream  # The menu, O key or phone may swap it during this pass.
+                    packet = stream.read(timeout=0)
                     if packet is not None:
-                        try:
-                            last_frame = self.process_frame(packet.frame, tracker)
+                        analyzer.submit(packet.frame)
+                    self._phone_input(stream)
+                    rendered, fresh = False, False
+                    try:
+                        with self.profiler.stage('capture'):
+                            result = analyzer.result(timeout=.004)
+                        now = time.perf_counter()
+                        if result is not None:
+                            last, fresh = result, True
+                            last_frame, rendered = self.compose(result), True
                             failures = 0
-                        except Exception:
-                            logger.exception('Frame skipped after a processing error')
-                            failures += 1
-                            if failures >= self.config.max_frame_failures:
-                                raise AppError(f'Stopped after {failures} consecutive frame errors; see logs/ar_hands.log.')
-                            self.pen.reset(self.canvas)
-                            self.profiler.end_frame()
-                            if not self.handle_key(cv2.waitKeyEx(1), last_frame):
-                                break
-                            continue
-                    elif stream.state is not CameraState.LIVE:
-                        self._update_interaction([], time.perf_counter())
-                        last_frame = np.zeros((self.config.height, self.config.width, 3), np.uint8)
-                        self.hud.draw_toast(last_frame, 'Camera lost, reconnecting... TAB settings / Q quit')
-                        self.menu.render(last_frame)
-                        self.guide.render(last_frame)
+                        elif stream.state is not CameraState.LIVE and analyzer.idle:
+                            if now - last_render >= tick:
+                                last = None
+                                self._update_interaction([], now)
+                                last_frame, rendered = self._waiting_frame(stream), True
+                        elif last is not None and now - last_render >= tick and not analyzer.busy:
+                            # Between camera frames: effects keep moving at the display rate.
+                            last_frame, rendered = self.compose(last, fresh=False), True
+                    except Exception:
+                        logger.exception('Frame skipped after a processing error')
+                        failures += 1
+                        if failures >= self.config.max_frame_failures:
+                            raise AppError(f'Stopped after {failures} consecutive frame errors; see logs/ar_hands.log.')
+                        self.pen.reset(self.canvas)
+                        last = None
                     with self.profiler.stage('imshow'):
-                        if last_frame is not None:
+                        if rendered and last_frame is not None:
                             self.window.present(last_frame)
+                            last_render = time.perf_counter()
                         key = cv2.waitKeyEx(1)
-                    if packet is not None:
+                    if rendered:
+                        if isinstance(stream, PhoneCamera) and stream.state is CameraState.LIVE:
+                            stream.publish(last_frame, self._phone_state())
                         self.profiler.end_frame()
-                        message = self.quality.update(time.perf_counter(), self.profiler.busy_ms())
-                        if message:
-                            self.toast(message)
+                        if fresh:
+                            message = self.quality.update(time.perf_counter(), self.profiler.busy_ms())
+                            if message:
+                                self.toast(message)
                     if not self.window.is_open() or not self.handle_key(key, last_frame):
                         break
         finally:
+            if analyzer is not None:
+                analyzer.stop()
             try:
-                if stream is not None:
-                    stream.stop()
+                if self.stream is not None:
+                    self.stream.stop()
+                    self.stream = None
             finally:
                 self.close_desktop()
                 self._tracker = None

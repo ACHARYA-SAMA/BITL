@@ -1,5 +1,6 @@
 """Smoothed FPS and readable overlay panels."""
 from __future__ import annotations
+import re
 import time
 import cv2
 import numpy as np
@@ -33,65 +34,106 @@ class FPSCounter:
 class HUDRenderer:
     """Render status and controls independently of the skeleton."""
 
+    # Text that would have to shrink more than this to fit on one line wraps instead.
+    # Portrait phone frames are viewed small, on the phone, so they wrap sooner.
+    MIN_FIT = 0.6
+    MIN_FIT_PORTRAIT = 0.8
     KEY_HINT = ("1 Draw 2 Jutsu 3 Blocks 4 Jujutsu | TAB menu ? guide | R record M mute F fullscreen | "
-                "F1-F7 color [ ] size | f fade P PNG S shot | F10 timing Q quit")
+                "O phone cam | F1-F7 color [ ] size | f fade P PNG S shot | F10 timing Q quit")
 
     def __init__(self, config: Config) -> None:
         """Initialize this component and its independent runtime state."""
         self.config = config
         self.show_indices = config.show_indices
         self.glow = config.glow
+        self._toast_offset = 3 * config.hud_brush_offset
+
+    def _lines(self, text: str, width: int, min_fit: float) -> list[str]:
+        """Wrap text at its | separators when one line would have to shrink below
+        ``min_fit`` to fit, as on narrow portrait phone frames; otherwise one line."""
+        c = self.config
+        font = cv2.FONT_HERSHEY_SIMPLEX
+
+        def size(line: str) -> int:
+            return cv2.getTextSize(line, font, c.text_scale, c.text_thickness)[0][0]
+
+        if size(text) * min_fit <= width or "|" not in text:
+            return [text]
+        lines: list[str] = []
+        for part in re.split(r"\s*\|\s*", text):
+            if lines and size(f"{lines[-1]}  |  {part}") <= width:
+                lines[-1] += f"  |  {part}"
+            else:
+                lines.append(part)
+        return lines
 
     def _panel(self, frame: np.ndarray, text: str, bottom: bool = False,
-               offset: int = 0, center: bool = False) -> None:
+               offset: int = 0, center: bool = False) -> int:
+        """Shade a panel and print text in it; returns the panel's bottom edge."""
         c = self.config
         height, width = frame.shape[:2]
         margin = min(c.margin, max(0, (min(width, height) - 1) // 4))
         available = max(1, width - 2 * margin)
         font = cv2.FONT_HERSHEY_SIMPLEX
-        raw_width = cv2.getTextSize(text, font, c.text_scale, c.text_thickness)[0][0]
+        lines = self._lines(text, available - 16, self.MIN_FIT_PORTRAIT if height > width else self.MIN_FIT)
+        raw_width = max(cv2.getTextSize(line, font, c.text_scale, c.text_thickness)[0][0] for line in lines)
         scale = c.text_scale * min(1.0, max(1, available - 16) / max(1, raw_width))
-        (tw, th), baseline = cv2.getTextSize(text, font, scale, c.text_thickness)
-        panel_height = min(height - 2 * margin, th + baseline + 16)
+        sizes = [cv2.getTextSize(line, font, scale, c.text_thickness) for line in lines]
+        th, baseline = sizes[0][0][1], sizes[0][1]
+        tw = max(size[0][0] for size in sizes)
+        step = th + baseline + 6
+        panel_height = min(height - 2 * margin, th + baseline + 16 + step * (len(lines) - 1))
         panel_width = min(available, tw + 16)
         top = height - margin - panel_height if bottom else min(margin + offset, height - panel_height)
         left = (width - panel_width) // 2 if center else margin
         roi = frame[top:top + panel_height, left:left + panel_width]
         if not roi.size:
-            return
+            return top
         shade = np.full_like(roi, c.dark_color)
         cv2.addWeighted(roi, 1 - c.hud_opacity, shade, c.hud_opacity, 0, dst=roi)
-        cv2.putText(frame, text, (left + 8, top + 8 + th), font, scale,
-                    c.text_color, c.text_thickness, cv2.LINE_AA)
+        for index, line in enumerate(lines):
+            cv2.putText(frame, line, (left + 8, top + 8 + th + index * step), font, scale,
+                        c.text_color, c.text_thickness, cv2.LINE_AA)
+        return top + panel_height
+
+    def _below(self, bottom: int, row: int) -> int:
+        """Offset for HUD row ``row``: its usual slot, or lower if a wrapped panel above needs it."""
+        return max(row * self.config.hud_brush_offset, bottom - self.config.margin + 8)
 
     def draw(self, frame: np.ndarray, fps: float, hand_count: int,
              color_index: int = 0, thickness: int | None = None,
              fade: bool = False, stroke_count: int = 0, gesture_status: str = "",
              mode: str = "Draw", status: str | None = None, icon: np.ndarray | None = None,
-             hint: str = "") -> None:
+             hint: str = "", camera_fps: float = 0.0, people: int = 0) -> None:
         """Metrics and mode, a mode status line (with color swatch or block icon),
         a gesture hint line, and the fitted key hint at the bottom."""
         c = self.config
         height, width = frame.shape[:2]
-        self._panel(frame, f"FPS {fps:5.1f}  |  Hands {hand_count}  |  {width}x{height}  |  Mode: {mode}")
+        camera = f" (camera {camera_fps:.0f})" if camera_fps else ""
+        crowd = f"  |  People {people}" if people > 1 else ""
+        bottom = self._panel(frame, f"FPS {fps:5.1f}{camera}  |  Hands {hand_count}{crowd}  |  "
+                                    f"{width}x{height}  |  Mode: {mode}")
         swatch = status is None  # The brush swatch belongs to the default (Draw) status.
         if swatch:
             status = (f"    {c.palette_names[color_index]}  {thickness or c.default_thickness}px  |  "
                       f"Fade {'on' if fade else 'off'}  |  Strokes {stroke_count}  |  "
                       f"{gesture_status or 'Point to draw'}")
-        self._panel(frame, status, offset=c.hud_brush_offset)
-        x, y = c.margin + 8, c.margin + c.hud_brush_offset + 8
+        offset = self._below(bottom, 1)
+        bottom = self._panel(frame, status, offset=offset)
+        x, y = c.margin + 8, c.margin + offset + 8
         if icon is not None:
             overlay_rgba(frame, icon, (x + 10, y + 8))
         elif swatch:
             cv2.rectangle(frame, (x, y), (x + 16, y + 16), c.palette[color_index], -1)
         if hint:
-            self._panel(frame, hint, offset=2 * c.hud_brush_offset)
+            bottom = self._panel(frame, hint, offset=self._below(bottom, 2))
+        self._toast_offset = self._below(bottom, 3)
         self._panel(frame, self.KEY_HINT, bottom=True)
 
     def draw_toast(self, frame: np.ndarray, text: str) -> None:
-        """Confirm a gesture-triggered action, centered below the HUD lines."""
-        self._panel(frame, text, offset=3 * self.config.hud_brush_offset, center=True)
+        """Confirm a gesture-triggered action, centered below this frame's HUD lines."""
+        self._panel(frame, text, offset=self._toast_offset, center=True)
+        self._toast_offset = 3 * self.config.hud_brush_offset
 
     def draw_banner(self, frame: np.ndarray, title: str, progress: float) -> None:
         """Mode-change title: pops in over the first quarter, fades over the last 40%."""

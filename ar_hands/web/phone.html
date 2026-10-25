@@ -1,0 +1,874 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#07080d">
+<meta name="color-scheme" content="dark">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="BITL">
+<title>BITL Phone Camera</title>
+<style>
+:root {
+  --bg: #07080d;
+  --glass: rgba(13, 15, 23, .74);
+  --glass-strong: rgba(13, 15, 23, .9);
+  --line: rgba(255, 255, 255, .09);
+  --text: #f3f5fa;
+  --muted: #9aa3b6;
+  --cyan: #3cc8ff;
+  --magenta: #ff4fd8;
+  --rec: #ff3b5c;
+  --ok: #5ef08a;
+  --warn: #ffbe3c;
+  --radius: 18px;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); }
+body {
+  font: 16px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior: none;
+}
+button {
+  font: inherit; color: inherit; border: 0; background: none; cursor: pointer;
+  touch-action: manipulation; user-select: none; -webkit-user-select: none;
+}
+button:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+[hidden] { display: none !important; }
+svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2;
+      stroke-linecap: round; stroke-linejoin: round; flex: none; }
+
+/* Setup ------------------------------------------------------------------ */
+#setup {
+  min-height: 100%; display: flex; flex-direction: column; justify-content: center;
+  max-width: 460px; margin: 0 auto;
+  padding: calc(28px + var(--safe-top)) calc(22px + var(--safe-right)) calc(28px + var(--safe-bottom)) calc(22px + var(--safe-left));
+  position: relative;
+}
+#setup::before {
+  content: ""; position: fixed; inset: -20% -40% auto; height: 70%; z-index: -1; pointer-events: none;
+  background: radial-gradient(closest-side, rgba(60, 200, 255, .22), transparent 70%),
+              radial-gradient(closest-side at 70% 60%, rgba(255, 79, 216, .16), transparent 70%);
+  filter: blur(10px);
+}
+.brand { display: flex; align-items: center; gap: 10px; margin-bottom: 28px; }
+.mark {
+  width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center;
+  background: linear-gradient(135deg, var(--cyan), var(--magenta));
+  box-shadow: 0 6px 24px rgba(60, 200, 255, .35);
+  color: #06070c; font-weight: 800; font-size: 15px; letter-spacing: .5px;
+}
+.brand small { display: block; color: var(--muted); font-size: 13px; }
+.brand strong { font-size: 17px; letter-spacing: .3px; }
+h1 { font-size: clamp(28px, 8vw, 34px); line-height: 1.12; margin: 0 0 12px; letter-spacing: -.5px; text-wrap: balance; }
+h1 em { font-style: normal; background: linear-gradient(90deg, var(--cyan), var(--magenta));
+        -webkit-background-clip: text; background-clip: text; color: transparent; }
+.lead { color: var(--muted); margin: 0 0 26px; text-wrap: pretty; }
+.label { font-size: 13px; color: var(--muted); margin: 0 0 8px; letter-spacing: .4px; text-transform: uppercase; }
+.segmented {
+  display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 4px; padding: 4px;
+  border-radius: 14px; background: rgba(255, 255, 255, .05); border: 1px solid var(--line);
+}
+.segmented button {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 46px; border-radius: 11px; color: var(--muted); font-weight: 600; font-size: 15px;
+  transition: background-color .2s, color .2s, transform .12s;
+}
+.segmented button[aria-pressed="true"] { background: rgba(255, 255, 255, .12); color: var(--text); }
+.segmented button:active { transform: scale(.96); }
+.primary {
+  width: 100%; min-height: 58px; margin-top: 22px; border-radius: 16px;
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  font-size: 18px; font-weight: 700; color: #06070c;
+  background: linear-gradient(100deg, var(--cyan), #8f8cff 55%, var(--magenta));
+  box-shadow: 0 10px 30px rgba(60, 200, 255, .28);
+  transition: transform .12s, opacity .2s;
+}
+.primary:active { transform: scale(.97); }
+.primary:disabled { opacity: .45; }
+.error {
+  margin: 16px 0 0; padding: 12px 14px; border-radius: 12px; font-size: 15px;
+  background: rgba(255, 59, 92, .12); border: 1px solid rgba(255, 59, 92, .35); color: #ffd3dc;
+}
+.tips { list-style: none; padding: 0; margin: 30px 0 0; display: grid; gap: 14px; }
+.tips li { display: flex; gap: 12px; color: var(--muted); font-size: 14px; }
+.tips svg { color: var(--cyan); width: 20px; height: 20px; margin-top: 1px; }
+
+/* Live ------------------------------------------------------------------- */
+#live { position: fixed; inset: 0; overflow: hidden; background: #000; }
+#stage { position: absolute; inset: 0; touch-action: none; }
+#stage video, #stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+#stage video { transform: scaleX(-1); }  /* The app mirrors its picture, so the preview matches. */
+#stage canvas { opacity: 0; transition: opacity .25s; }
+#stage.has-view canvas { opacity: 1; }
+#stage.preview-off canvas { opacity: 0; }
+.chrome { transition: opacity .25s, transform .25s; }
+body.immersive .chrome { opacity: 0; pointer-events: none; }
+body.immersive .topbar.chrome { transform: translateY(-8px); }
+body.immersive .dock.chrome { transform: translateY(12px); }
+
+.topbar {
+  position: absolute; top: 0; left: 0; right: 0; display: flex; align-items: center; justify-content: space-between;
+  gap: 10px; padding: calc(10px + var(--safe-top)) calc(12px + var(--safe-right)) 10px calc(12px + var(--safe-left));
+  background: linear-gradient(rgba(0, 0, 0, .55), transparent);
+}
+.pill {
+  display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 14px; border-radius: 999px;
+  background: var(--glass); border: 1px solid var(--line); font-size: 13px; font-weight: 600;
+  font-variant-numeric: tabular-nums; -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+  white-space: nowrap; min-width: 0; flex: 0 1 auto; overflow: hidden;
+}
+#status-text { overflow: hidden; text-overflow: ellipsis; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--warn); box-shadow: 0 0 10px currentColor; color: var(--warn); }
+.pill[data-tone="ok"] .dot { background: var(--ok); color: var(--ok); }
+.pill[data-tone="off"] .dot { background: var(--muted); color: transparent; }
+.top-actions { display: flex; gap: 6px; flex: none; }
+.round {
+  width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--glass); border: 1px solid var(--line); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+  transition: transform .12s, background-color .2s;
+}
+.round:active { transform: scale(.92); }
+.round[aria-pressed="false"] { color: var(--muted); }
+
+.chip {
+  position: absolute; left: 50%; top: calc(64px + var(--safe-top)); transform: translateX(-50%);
+  padding: 8px 14px; border-radius: 999px; font-size: 13px; font-weight: 600; white-space: nowrap;
+  background: rgba(60, 200, 255, .16); border: 1px solid rgba(60, 200, 255, .45); color: #d6f4ff;
+  -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); pointer-events: none;
+}
+.notice {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(88vw, 380px);
+  padding: 22px; border-radius: var(--radius); text-align: center;
+  background: var(--glass-strong); border: 1px solid var(--line);
+  -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px); box-shadow: 0 20px 60px rgba(0, 0, 0, .5);
+}
+.notice p { margin: 0; text-wrap: pretty; }
+.notice .primary { min-height: 50px; margin-top: 18px; font-size: 16px; }
+
+.dock {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  padding: 12px calc(12px + var(--safe-right)) calc(12px + var(--safe-bottom)) calc(12px + var(--safe-left));
+  background: var(--glass); border-top: 1px solid var(--line); border-radius: 24px 24px 0 0;
+  -webkit-backdrop-filter: blur(20px) saturate(1.3); backdrop-filter: blur(20px) saturate(1.3);
+}
+.modes button { min-height: 42px; font-size: 14px; }
+.modes button[aria-pressed="true"] { background: linear-gradient(100deg, rgba(60, 200, 255, .3), rgba(255, 79, 216, .26)); }
+.hint { margin: 10px 4px 2px; color: var(--muted); font-size: 12.5px; line-height: 1.4; min-height: 2.8em; text-wrap: pretty; }
+.actions { display: grid; grid-template-columns: repeat(5, 1fr); gap: 2px 4px; margin-top: 6px; }
+.act {
+  display: flex; flex-direction: column; align-items: center; gap: 5px; padding: 9px 0 7px; min-height: 58px;
+  border-radius: 14px; font-size: 11.5px; font-weight: 600; color: #dfe4ee;
+  transition: background-color .15s, transform .12s, opacity .2s;
+}
+.act:active { transform: scale(.94); background: rgba(255, 255, 255, .1); }
+.act:disabled { opacity: .35; }
+.act[aria-pressed="true"] { color: var(--rec); }
+.act[data-cmd="record"][aria-pressed="true"] svg { animation: pulse 1.2s ease-in-out infinite; }
+.swatch { width: 22px; height: 22px; border-radius: 50%; background: var(--cyan); box-shadow: 0 0 0 2px rgba(255, 255, 255, .85), 0 0 14px var(--cyan); }
+@keyframes pulse { 50% { opacity: .35; } }
+
+@media (min-width: 640px) and (min-height: 561px) {  /* Tablets: a centered dock, not a full-width bar. */
+  .dock { left: calc(50% - 280px); right: calc(50% - 280px); border: 1px solid var(--line); border-bottom: 0; }
+}
+@media (orientation: landscape) and (max-height: 560px) {
+  .dock {
+    left: auto; top: 0; width: min(330px, 44vw); border-top: 0; border-left: 1px solid var(--line);
+    border-radius: 24px 0 0 24px; overflow-y: auto;
+    padding: calc(12px + var(--safe-top)) calc(12px + var(--safe-right)) calc(12px + var(--safe-bottom)) 12px;
+  }
+  body.immersive .dock.chrome { transform: translateX(12px); }
+  .topbar, #stage { right: min(330px, 44vw); }  /* The picture sits beside the dock, not under it. */
+  body.immersive .topbar, body.immersive #stage { right: 0; }
+  .actions { grid-template-columns: repeat(4, 1fr); }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; }
+}
+</style>
+</head>
+<body>
+<main id="setup">
+  <div class="brand">
+    <div class="mark">BITL</div>
+    <div><strong>Phone Camera</strong><small>Bring Ideas to Life</small></div>
+  </div>
+  <h1>Your phone is the <em>camera</em>.<br>Your hands do the magic.</h1>
+  <p class="lead">This phone films you and sends the video to BITL on your computer. You see the finished AR picture right here, and on the computer screen.</p>
+  <p class="label">Camera</p>
+  <div class="segmented" id="facing">
+    <button type="button" data-facing="user" aria-pressed="true">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M5 20a7 7 0 0 1 14 0"/></svg>Selfie
+    </button>
+    <button type="button" data-facing="environment" aria-pressed="false">
+      <svg viewBox="0 0 24 24"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>Back
+    </button>
+  </div>
+  <button type="button" class="primary" id="start">
+    <svg viewBox="0 0 24 24"><path d="M15 10l5-3v10l-5-3"/><rect x="3" y="6" width="12" height="12" rx="2"/></svg>Start camera
+  </button>
+  <p class="error" id="setup-error" role="alert" hidden></p>
+  <ul class="tips">
+    <li><svg viewBox="0 0 24 24"><path d="M7 21h10M12 17v4M5 3h14v14H5z"/></svg>Prop the phone up at chest height, about an arm's length away, with both hands in view.</li>
+    <li><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5 19 19M5 19l1.5-1.5M17.5 6.5 19 5"/></svg>Light on your hands makes gestures snappier. Selfie camera lets you watch yourself.</li>
+    <li><svg viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16.5 9a4 4 0 0 1 0 6"/></svg>Sound plays on the computer. Keep this page open while you play.</li>
+  </ul>
+</main>
+
+<section id="live" hidden>
+  <div id="stage">
+    <video id="video" playsinline muted autoplay></video>
+    <canvas id="view"></canvas>
+  </div>
+  <header class="topbar chrome">
+    <div class="pill" id="status" data-tone="warn"><span class="dot"></span><span id="status-text">Connecting</span></div>
+    <div class="top-actions">
+      <button type="button" class="round" id="preview" aria-pressed="true" aria-label="Show the AR picture">
+        <svg viewBox="0 0 24 24"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+      </button>
+      <button type="button" class="round" id="rotate" aria-label="Rotate the picture">
+        <svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg>
+      </button>
+      <button type="button" class="round" id="flip" aria-label="Switch camera">
+        <svg viewBox="0 0 24 24"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><path d="M9.5 12.5a2.7 2.7 0 0 1 4.6-1.6M14.5 14a2.7 2.7 0 0 1-4.6 1.6"/><path d="M14.4 9.6v1.6h-1.6M9.6 17v-1.6h1.6"/></svg>
+      </button>
+      <button type="button" class="round" id="stop" aria-label="Stop the camera">
+        <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+    </div>
+  </header>
+  <div class="chip" id="overlay-hint" hidden>Tap the menu on this screen</div>
+  <div class="notice" id="notice" role="alert" hidden>
+    <p id="notice-text"></p>
+    <button type="button" class="primary" id="notice-action" hidden></button>
+  </div>
+  <nav class="dock chrome" aria-label="BITL controls">
+    <div class="segmented modes" id="modes">
+      <button type="button" data-mode="Draw" aria-pressed="true">Draw</button>
+      <button type="button" data-mode="Jutsu" aria-pressed="false">Jutsu</button>
+      <button type="button" data-mode="Blocks" aria-pressed="false">Blocks</button>
+      <button type="button" data-mode="Jujutsu" aria-pressed="false">Jujutsu</button>
+    </div>
+    <p class="hint" id="hint"></p>
+    <div class="actions" id="actions">
+      <button type="button" class="act" data-cmd="color" data-draw><span class="swatch" id="swatch"></span>Color</button>
+      <button type="button" class="act" data-cmd="undo" data-draw><svg viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/></svg>Undo</button>
+      <button type="button" class="act" data-cmd="redo" data-draw><svg viewBox="0 0 24 24"><path d="m15 14 5-5-5-5"/><path d="M20 9H9a5 5 0 0 0 0 10h3"/></svg>Redo</button>
+      <button type="button" class="act" data-cmd="clear" data-draw><svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>Clear</button>
+      <button type="button" class="act" data-cmd="save" data-draw><svg viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>Save</button>
+      <button type="button" class="act" data-cmd="snap" data-draw><svg viewBox="0 0 24 24"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M6 18l2.5-2.5M15.5 8.5 18 6"/></svg>Snap</button>
+      <button type="button" class="act" data-cmd="record" aria-pressed="false"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.5" fill="currentColor"/></svg>Record</button>
+      <button type="button" class="act" data-cmd="mute" id="mute"><svg viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path id="mute-waves" d="M16.5 9a4 4 0 0 1 0 6M19 6.5a7.5 7.5 0 0 1 0 11"/></svg><span id="mute-label">Sound</span></button>
+      <button type="button" class="act" data-cmd="guide"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.7v.5M12 17h.01"/></svg>Guide</button>
+      <button type="button" class="act" data-cmd="menu"><svg viewBox="0 0 24 24"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg>Menu</button>
+    </div>
+  </nav>
+</section>
+
+<script>
+(() => {
+  'use strict';
+  const MAX_SIDE = 1280;          // The app works at 720p; bigger frames only cost bandwidth.
+  const JPEG_QUALITY = 0.7;       // Fallback when the browser cannot encode H.264.
+  const BITRATE = { start: 5e6, min: 1.2e6, max: 8e6 };  // H.264 bits per second.
+  const KEYFRAME_MS = 2000;       // A periodic key frame lets the laptop recover from any glitch.
+  const MAX_BUFFERED = 150000;    // Bytes queued in the socket before camera frames are skipped.
+  const HINTS = {
+    Draw: 'Point to draw. Fist lifts the pen. Peace: next color. Hold an open palm to clear. Snap your fingers to turn to dust.',
+    Jutsu: 'Open palm: fireball, flick to throw. Fist then open: Chidori. OK sign: Rasenshuriken. Both fists: Susanoo.',
+    Blocks: 'Pinch empty space for a block, pinch one to move it. Point at a block to break it, or punch it.',
+    Jujutsu: 'Point: Blue. Peace: Red. Bring them together for Hollow Purple. Crossed fingers or prayer: a domain.',
+  };
+  const $ = (id) => document.getElementById(id);
+  const key = new URLSearchParams(location.search).get('k') || '';
+  const client = crypto.randomUUID ? crypto.randomUUID() : `${Date.now().toString(36)}${Math.random().toString(36).slice(2)}`;
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const video = $('video');
+  const view = $('view');
+  const viewContext = view.getContext('2d');
+  const stage = $('stage');
+  const capture = document.createElement('canvas');
+  const captureContext = capture.getContext('2d', { alpha: false });
+
+  let facing = 'user';
+  let camera = null;
+  let ws = null;
+  let welcomed = false;
+  let streaming = false;
+  let generation = 0;
+  let claim = true;
+  let preview = true;
+  let halted = false;
+  let reconnectDelay = 250;
+  let reconnectTimer = 0;
+  let state = {};
+  let wakeLock = null;
+  // Video encoding.
+  let codec = 'jpeg';
+  let codecString = null;
+  let encoder = null;
+  let encoded = null;   // {width, height, bitrate} the encoder is configured for.
+  let needKey = true;
+  let keyAt = 0;
+  let bitrate = BITRATE.start;
+  let jpegPending = 0;
+  let sent = 0;
+  let skipped = 0;
+  // Orientation: frames are rotated so the laptop gets an upright picture even
+  // when the phone's screen rotation is locked while it is held sideways.
+  let deviceAngle = null;  // From gravity: 0 upright, 90 turned counterclockwise...
+  let gravitySign = isIOS ? -1 : 1;  // iOS reports gravity with the opposite sign.
+  let extraTurn = 0;  // The rotate button, for when the sensors guess wrong.
+
+  // Setup ---------------------------------------------------------------------
+  const setupError = (text) => { $('setup-error').textContent = text; $('setup-error').hidden = !text; };
+  if (!key) {
+    setupError('Open this page by scanning the QR code on your computer, so it carries the pairing key.');
+    $('start').disabled = true;
+  } else if (!window.isSecureContext || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    setupError('This browser blocks the camera here. Scan the QR code again so the page opens with https://.');
+    $('start').disabled = true;
+  }
+  for (const button of document.querySelectorAll('#facing button')) {
+    button.addEventListener('click', () => {
+      facing = button.dataset.facing;
+      for (const other of document.querySelectorAll('#facing button')) {
+        other.setAttribute('aria-pressed', String(other === button));
+      }
+    });
+  }
+
+  $('start').addEventListener('click', async () => {
+    askMotionPermission();  // iOS only allows the request inside the tap itself.
+    $('start').disabled = true;
+    setupError('');
+    if (await openCamera()) {
+      $('setup').hidden = true;
+      $('live').hidden = false;
+      setPreview(facing === 'user');  // The back camera faces you: its screen does not.
+      keepAwake();
+      halted = false;
+      claim = true;
+      connect();
+      begin();
+    }
+    $('start').disabled = false;
+  });
+
+  function cameraProblem(error) {
+    const name = error && error.name;
+    if (name === 'NotAllowedError' || name === 'SecurityError') {
+      return 'Camera access was blocked. Allow the camera for this site in your browser settings, then reload the page.';
+    }
+    if (name === 'NotFoundError' || name === 'OverconstrainedError') return 'No camera was found on this device.';
+    if (name === 'NotReadableError') return 'The camera is busy. Close other apps that use it and try again.';
+    return `The camera could not start (${name || error}).`;
+  }
+
+  async function openCamera() {
+    stopCamera();
+    const wanted = { facingMode: { ideal: facing }, width: { ideal: 1280 }, height: { ideal: 720 },
+                     frameRate: { ideal: 60 } };
+    try {
+      camera = await navigator.mediaDevices.getUserMedia({ audio: false, video: wanted });
+    } catch (error) {
+      if (error && error.name === 'OverconstrainedError') {
+        try { camera = await navigator.mediaDevices.getUserMedia({ audio: false, video: true }); } catch (retry) { error = retry; }
+      }
+      if (!camera) {
+        if ($('live').hidden) setupError(cameraProblem(error));
+        else halt(cameraProblem(error), 'Try again', restartCamera);
+        return false;
+      }
+    }
+    video.srcObject = camera;
+    try { await video.play(); } catch (_) { /* Autoplay retries once frames arrive. */ }
+    camera.getVideoTracks()[0].addEventListener('ended', () => {
+      if (streaming) halt('The camera stopped (another app may have taken it).', 'Restart camera', restartCamera);
+    });
+    return true;
+  }
+
+  function stopCamera() {
+    if (camera) camera.getTracks().forEach((track) => track.stop());
+    camera = null;
+  }
+
+  async function restartCamera() {
+    hideNotice();
+    if (await openCamera()) resume();
+  }
+
+  // Connection ------------------------------------------------------------------
+  function connect() {
+    clearTimeout(reconnectTimer);
+    if (ws) { ws.onclose = null; ws.close(); }
+    const scheme = location.protocol === 'https:' ? 'wss' : 'ws';
+    ws = new WebSocket(`${scheme}://${location.host}/ws?k=${encodeURIComponent(key)}`);
+    ws.binaryType = 'arraybuffer';
+    welcomed = false;
+    setStatus('warn', 'Connecting');
+    ws.onopen = () => {
+      reconnectDelay = 250;
+      send({ t: 'hello', client, claim, preview });
+    };
+    ws.onmessage = (event) => {
+      if (typeof event.data === 'string') {
+        try { onMessage(JSON.parse(event.data)); } catch (_) { /* Ignore a malformed message. */ }
+      } else {
+        show(event.data);
+      }
+    };
+    ws.onclose = () => {
+      welcomed = false;
+      resetEncoder();
+      if (halted || !streaming) return;
+      setStatus('warn', 'Reconnecting');
+      reconnectTimer = setTimeout(connect, reconnectDelay);
+      reconnectDelay = Math.min(3000, reconnectDelay * 2);
+    };
+  }
+
+  function send(message) {
+    if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(message));
+  }
+
+  function onMessage(message) {
+    if (message.t === 'welcome') {
+      welcomed = true;
+      claim = false;
+      codec = message.codecs.includes('h264') && 'VideoEncoder' in window && 'VideoFrame' in window ? 'h264' : 'jpeg';
+      resetEncoder();
+      if (codec === 'jpeg') send({ t: 'config', codec: 'jpeg' });
+    } else if (message.t === 'state') {
+      applyState(message);
+    } else if (message.t === 'keyframe') {
+      needKey = true;
+    } else if (message.t === 'error' && message.code === 409) {
+      halt('Another device is now the camera.', 'Use this phone', () => { claim = true; resume(); });
+    } else if (message.t === 'error' && message.code === 401) {
+      halt('This link has expired because BITL restarted. Scan the new QR code on your computer.');
+    } else if (message.t === 'error' && message.code === 503) {
+      halt('BITL switched to its own webcam. Choose Phone in its settings or press O there, then try again.',
+           'Try again', resume);
+    }
+  }
+
+  function halt(text, action, onAction) {
+    halted = true;
+    streaming = false;
+    generation += 1;
+    clearTimeout(reconnectTimer);
+    if (ws) { ws.onclose = null; ws.close(); ws = null; }
+    resetEncoder();
+    setStatus('off', 'Paused');
+    notice(text, action, onAction);
+  }
+
+  function resume() {
+    hideNotice();
+    halted = false;
+    connect();
+    begin();
+  }
+
+  // Camera frames -> video ---------------------------------------------------------
+  function begin() {
+    streaming = true;
+    pump(++generation);
+  }
+
+  function nextVideoFrame() {
+    return new Promise((resolve) => {
+      if (video.requestVideoFrameCallback) {
+        video.requestVideoFrameCallback(() => resolve());
+        return;
+      }
+      // Without frame callbacks, wait for the picture to change: sending the
+      // same frame twice would read as a hand that stopped dead.
+      const shown = video.currentTime;
+      const check = () => (video.currentTime !== shown ? resolve() : requestAnimationFrame(check));
+      requestAnimationFrame(check);
+    });
+  }
+
+  async function pump(run) {
+    while (streaming && run === generation) {
+      await nextVideoFrame();
+      if (!streaming || run !== generation) return;
+      if (document.hidden || !welcomed || !video.videoWidth) continue;
+      const busy = ws.bufferedAmount > MAX_BUFFERED || jpegPending > 1 || (encoder && encoder.encodeQueueSize > 2);
+      if (busy) {
+        skipped += 1;  // The network is behind: drop this frame rather than add delay.
+        continue;
+      }
+      const [width, height] = drawFrame(rotation());
+      if (codec === 'h264') {
+        if (await ensureEncoder(width, height)) encodeH264();
+      }
+      if (codec === 'jpeg') encodeJpeg();
+    }
+  }
+
+  function screenAngle() {
+    if (screen.orientation && typeof screen.orientation.angle === 'number') return screen.orientation.angle;
+    return ((window.orientation || 0) + 360) % 360;
+  }
+
+  function rotation() {
+    const ui = screenAngle();
+    const physical = deviceAngle === null ? ui : deviceAngle;
+    return ((physical - ui + extraTurn) % 360 + 360) % 360;
+  }
+
+  function drawFrame(turn) {
+    const sideways = turn % 180 !== 0;
+    const sourceWidth = video.videoWidth;
+    const sourceHeight = video.videoHeight;
+    const scale = Math.min(1, MAX_SIDE / Math.max(sourceWidth, sourceHeight));
+    const even = (value) => Math.max(2, Math.round(value * scale / 2) * 2);  // H.264 needs even sizes.
+    const width = even(sideways ? sourceHeight : sourceWidth);
+    const height = even(sideways ? sourceWidth : sourceHeight);
+    if (capture.width !== width || capture.height !== height) {
+      capture.width = width;
+      capture.height = height;
+    }
+    captureContext.save();
+    captureContext.translate(width / 2, height / 2);
+    captureContext.rotate(-turn * Math.PI / 180);  // Undo the phone's turn (canvas angles run clockwise).
+    const drawWidth = sideways ? height : width;
+    const drawHeight = sideways ? width : height;
+    captureContext.drawImage(video, -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight);
+    captureContext.restore();
+    return [width, height];
+  }
+
+  function encodeJpeg() {
+    jpegPending += 1;
+    capture.toBlob((blob) => {
+      jpegPending -= 1;
+      if (blob && ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(blob);
+        sent += 1;
+      }
+    }, 'image/jpeg', JPEG_QUALITY);
+  }
+
+  async function chooseCodec(width, height) {
+    const candidates = codecString ? [codecString]
+      : ['avc1.42E020', 'avc1.42E01F', 'avc1.42E028', 'avc1.4D4020', 'avc1.4D401F', 'avc1.640028', 'avc1.64001F'];
+    for (const candidate of candidates) {
+      for (const acceleration of ['prefer-hardware', 'no-preference']) {
+        const config = encoderConfig(candidate, width, height, acceleration);
+        try {
+          const support = await VideoEncoder.isConfigSupported(config);
+          if (support.supported) {
+            codecString = candidate;
+            return config;
+          }
+        } catch (_) { /* Try the next profile. */ }
+      }
+    }
+    return null;
+  }
+
+  function encoderConfig(name, width, height, acceleration) {
+    return { codec: name, width, height, bitrate: Math.round(bitrate), framerate: 60, latencyMode: 'realtime',
+             avc: { format: 'annexb' }, hardwareAcceleration: acceleration };
+  }
+
+  async function ensureEncoder(width, height) {
+    const same = encoded && encoded.width === width && encoded.height === height
+      && Math.abs(encoded.bitrate - bitrate) / encoded.bitrate < 0.2;
+    if (same && encoder && encoder.state === 'configured') return true;
+    const config = await chooseCodec(width, height);
+    if (!config) {
+      fallBackToJpeg();
+      return false;
+    }
+    try {
+      if (!encoder || encoder.state === 'closed') {
+        encoder = new VideoEncoder({ output: onChunk, error: fallBackToJpeg });
+      }
+      encoder.configure(config);
+    } catch (_) {
+      fallBackToJpeg();
+      return false;
+    }
+    encoded = { width, height, bitrate };
+    needKey = true;
+    send({ t: 'config', codec: 'h264', width, height });
+    return true;
+  }
+
+  function encodeH264() {
+    const now = performance.now();
+    const keyFrame = needKey || now - keyAt > KEYFRAME_MS;
+    let frame = null;
+    try {
+      frame = new VideoFrame(capture, { timestamp: Math.round(now * 1000) });
+      encoder.encode(frame, { keyFrame });
+      if (keyFrame) {
+        needKey = false;
+        keyAt = now;
+      }
+    } catch (_) {
+      fallBackToJpeg();
+    } finally {
+      if (frame) frame.close();
+    }
+  }
+
+  function onChunk(chunk) {
+    const data = new ArrayBuffer(chunk.byteLength);
+    chunk.copyTo(data);
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(data);
+      sent += 1;
+    }
+  }
+
+  function fallBackToJpeg() {
+    resetEncoder();
+    codec = 'jpeg';
+    send({ t: 'config', codec: 'jpeg' });
+  }
+
+  function resetEncoder() {
+    if (encoder && encoder.state !== 'closed') {
+      try { encoder.close(); } catch (_) { /* Already closed. */ }
+    }
+    encoder = null;
+    encoded = null;
+    needKey = true;
+  }
+
+  // Once a second: frame rate on the pill, and bitrate follows what the network carries.
+  setInterval(() => {
+    if (streaming && welcomed) {
+      const label = codec === 'h264' ? 'H.264' : 'JPEG';
+      setStatus('ok', `${sent} fps  ·  ${label}`);  // The green dot already says live.
+      if (codec === 'h264') {
+        if (skipped > (sent + skipped) * 0.1) bitrate = Math.max(BITRATE.min, bitrate * 0.75);
+        else if (!skipped) bitrate = Math.min(BITRATE.max, bitrate * 1.08);
+      }
+    }
+    sent = 0;
+    skipped = 0;
+  }, 1000);
+
+  // Orientation from gravity ----------------------------------------------------------
+  async function askMotionPermission() {
+    const request = window.DeviceMotionEvent && DeviceMotionEvent.requestPermission;
+    if (!request) return;
+    try { await DeviceMotionEvent.requestPermission(); } catch (_) { /* The rotate button still works. */ }
+  }
+
+  window.addEventListener('devicemotion', (event) => {
+    const gravity = event.accelerationIncludingGravity;
+    if (!gravity || gravity.x === null || gravity.y === null) return;
+    const x = gravity.x * gravitySign;
+    const y = gravity.y * gravitySign;
+    if (Math.hypot(x, y) < 6) return;  // Lying flat: keep the last orientation.
+    const angle = ((Math.atan2(x, y) * 180 / Math.PI) + 360) % 360;
+    const snapped = (Math.round(angle / 90) % 4) * 90;
+    const off = Math.abs(((angle - snapped) + 540) % 360 - 180);
+    if (off < 30) deviceAngle = snapped;  // Hysteresis: ignore diagonal poses.
+  });
+
+  // When the screen does rotate, the sensor must agree with it; if it reads the
+  // exact opposite, this browser reports gravity with the other sign.
+  const calibrate = () => {
+    const ui = screenAngle();
+    if (deviceAngle !== null && ui !== 0 && (deviceAngle + 180) % 360 === ui) {
+      gravitySign = -gravitySign;
+      deviceAngle = ui;
+    }
+  };
+  if (screen.orientation) screen.orientation.addEventListener('change', () => setTimeout(calibrate, 300));
+  window.addEventListener('orientationchange', () => setTimeout(calibrate, 300));
+
+  // Finished pictures from the laptop -----------------------------------------------------
+  async function show(data) {
+    const blob = new Blob([data], { type: 'image/jpeg' });
+    let image = null;
+    if (window.createImageBitmap) {
+      try { image = await createImageBitmap(blob); } catch (_) { image = null; }
+    }
+    if (!image) {
+      image = new Image();
+      const url = URL.createObjectURL(blob);
+      image.src = url;
+      try { await image.decode(); } catch (_) { URL.revokeObjectURL(url); send({ t: 'ack' }); return; }
+      URL.revokeObjectURL(url);
+    }
+    if (preview) {
+      if (view.width !== image.width || view.height !== image.height) {
+        view.width = image.width;
+        view.height = image.height;
+      }
+      viewContext.drawImage(image, 0, 0);
+      stage.classList.add('has-view');
+    }
+    if (image.close) image.close();
+    send({ t: 'ack' });  // Ready for the next one: pictures never queue up.
+  }
+
+  function setPreview(on) {
+    preview = on;
+    $('preview').setAttribute('aria-pressed', String(on));
+    stage.classList.toggle('preview-off', !on);
+    send({ t: 'preview', on });
+  }
+
+  function setStatus(tone, text) {
+    $('status').dataset.tone = tone;
+    $('status-text').textContent = text;
+  }
+
+  function applyState(next) {
+    state = next;
+    for (const button of document.querySelectorAll('#modes button')) {
+      button.setAttribute('aria-pressed', String(button.dataset.mode === state.mode));
+    }
+    $('hint').textContent = HINTS[state.mode] || '';
+    for (const button of document.querySelectorAll('[data-draw]')) button.hidden = state.mode !== 'Draw';
+    document.querySelector('[data-cmd="record"]').setAttribute('aria-pressed', String(Boolean(state.recording)));
+    $('mute').disabled = !state.audio;
+    $('mute-waves').style.display = state.muted ? 'none' : '';
+    $('mute-label').textContent = state.muted ? 'Muted' : 'Sound';
+    if (state.color) {
+      $('swatch').style.background = state.color;
+      $('swatch').style.boxShadow = `0 0 0 2px rgba(255,255,255,.85), 0 0 14px ${state.color}`;
+    }
+    const hint = $('overlay-hint');
+    hint.hidden = !state.overlay;
+    hint.textContent = !preview ? 'Menu open: turn on the AR picture to tap it'
+      : state.overlay === 'guide' ? 'Tap the screen to close the guide' : 'Tap the menu on this screen';
+    if (state.overlay) document.body.classList.remove('immersive');
+  }
+
+  function notice(text, action, onAction) {
+    $('notice-text').textContent = text;
+    const button = $('notice-action');
+    button.hidden = !action;
+    button.textContent = action || '';
+    button.onclick = onAction || null;
+    $('notice').hidden = false;
+  }
+
+  function hideNotice() { $('notice').hidden = true; }
+
+  // Buttons ---------------------------------------------------------------------
+  function command(name, value) {
+    if (navigator.vibrate) navigator.vibrate(8);
+    send({ t: 'command', name, value });
+  }
+
+  for (const button of document.querySelectorAll('#modes button')) {
+    button.addEventListener('click', () => {
+      for (const other of document.querySelectorAll('#modes button')) {
+        other.setAttribute('aria-pressed', String(other === button));
+      }
+      $('hint').textContent = HINTS[button.dataset.mode];
+      command('mode', button.dataset.mode);
+    });
+  }
+  for (const button of document.querySelectorAll('[data-cmd]')) {
+    button.addEventListener('click', () => command(button.dataset.cmd));
+  }
+  $('hint').textContent = HINTS.Draw;
+
+  $('preview').addEventListener('click', () => setPreview(!preview));
+  $('rotate').addEventListener('click', () => {
+    extraTurn = (extraTurn + 90) % 360;
+    if (navigator.vibrate) navigator.vibrate(8);
+  });
+  $('flip').addEventListener('click', async () => {
+    facing = facing === 'user' ? 'environment' : 'user';
+    generation += 1;
+    if (await openCamera()) {
+      setPreview(facing === 'user');
+      begin();
+    }
+  });
+  $('stop').addEventListener('click', () => {
+    halted = true;
+    streaming = false;
+    generation += 1;
+    clearTimeout(reconnectTimer);
+    if (ws) { ws.onclose = null; ws.close(); ws = null; }
+    resetEncoder();
+    stopCamera();
+    hideNotice();
+    stage.classList.remove('has-view');
+    $('live').hidden = true;
+    $('setup').hidden = false;
+  });
+
+  // Touches on the picture: the app's menu and guide, or hide the controls ----------------
+  let touching = false;
+  let moveFrame = 0;
+  let latestMove = null;
+
+  function framePoint(event) {
+    const box = view.getBoundingClientRect();
+    const scale = Math.min(box.width / view.width, box.height / view.height);
+    const width = view.width * scale;
+    const height = view.height * scale;
+    return { x: (event.clientX - box.left - (box.width - width) / 2) / width,
+             y: (event.clientY - box.top - (box.height - height) / 2) / height };
+  }
+
+  stage.addEventListener('pointerdown', (event) => {
+    if (!state.overlay || !preview || !view.width) return;
+    const point = framePoint(event);
+    if (point.x < 0 || point.x > 1 || point.y < 0 || point.y > 1) return;
+    touching = true;
+    stage.setPointerCapture(event.pointerId);
+    send({ t: 'pointer', x: point.x, y: point.y, down: true });
+  });
+  stage.addEventListener('pointermove', (event) => {
+    if (!touching) return;
+    latestMove = framePoint(event);
+    if (moveFrame) return;  // At most one move per screen refresh.
+    moveFrame = requestAnimationFrame(() => {
+      moveFrame = 0;
+      if (touching) send({ t: 'pointer', x: latestMove.x, y: latestMove.y, down: true });
+    });
+  });
+  const release = (event) => {
+    if (!touching) return;
+    touching = false;
+    const point = framePoint(event);
+    send({ t: 'pointer', x: point.x, y: point.y, down: false });
+  };
+  stage.addEventListener('pointerup', release);
+  stage.addEventListener('pointercancel', release);
+  stage.addEventListener('click', () => {
+    if (!state.overlay) document.body.classList.toggle('immersive');
+  });
+
+  // Keep the screen on, and resume after the phone was locked or the tab hidden ----------
+  async function keepAwake() {
+    try { wakeLock = navigator.wakeLock ? await navigator.wakeLock.request('screen') : null; } catch (_) { wakeLock = null; }
+  }
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'visible' || !camera) return;
+    keepAwake();
+    if (video.paused) video.play().catch(() => {});
+    needKey = true;
+    if (streaming && (!ws || ws.readyState > WebSocket.OPEN)) connect();
+  });
+})();
+</script>
+</body>
+</html>

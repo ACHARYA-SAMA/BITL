@@ -99,8 +99,8 @@ class PenController:
         """Update from one frame; timestamp is monotonic seconds, not a frame count."""
         visible: dict[str, HandData] = {}
         for hand in hands:
-            if hand.handedness not in visible or hand.score > visible[hand.handedness].score:
-                visible[hand.handedness] = hand
+            if hand.key not in visible or hand.score > visible[hand.key].score:
+                visible[hand.key] = hand
         for name in tuple(self._states):
             if name in visible:
                 continue

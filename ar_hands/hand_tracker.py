@@ -9,6 +9,7 @@ from pathlib import Path
 from tempfile import NamedTemporaryFile
 from types import TracebackType
 import logging
+import threading
 import urllib.error
 import urllib.request
 import zipfile
@@ -58,6 +59,12 @@ class HandData:
     landmarks_px: list[tuple[int, int]]
     landmarks_norm: list[tuple[float, float, float]]
     bbox: tuple[int, int, int, int]
+    track_id: str = ""  # Stable id from identity.py ("Left", "Right 2"...); "" = use handedness.
+
+    @property
+    def key(self) -> str:
+        """The id gestures, pens and effects keep this hand's state under."""
+        return self.track_id or self.handedness
 
 
 def distance(p1: tuple[float, float], p2: tuple[float, float]) -> float:
@@ -147,6 +154,7 @@ class HandTracker:
         self._rgb: np.ndarray | None = None
         self._small: np.ndarray | None = None
         self._landmarker: vision.HandLandmarker | None = None
+        self._lock = threading.Lock()  # detect() runs on the analyzer thread; reconfigure() on the UI's.
         # Mutable at runtime: adaptive quality lowers it when frames run slow.
         self.detect_scale = self.config.detect_scale
         self._landmarker = self._create(self.config)
@@ -176,8 +184,9 @@ class HandTracker:
         MediaPipe fixes them at creation, so build the replacement first and
         swap only once it exists: a failure leaves the working tracker in place."""
         replacement = self._create(config)
-        previous, self._landmarker = self._landmarker, replacement
-        self.config = config
+        with self._lock:
+            previous, self._landmarker = self._landmarker, replacement
+            self.config = config
         if previous is not None:
             try:
                 previous.close()
@@ -195,7 +204,8 @@ class HandTracker:
 
     def close(self) -> None:
         """Close once; tolerate repeated cleanup without hiding earlier errors."""
-        landmarker, self._landmarker = self._landmarker, None
+        with self._lock:
+            landmarker, self._landmarker = self._landmarker, None
         if landmarker is not None:
             try:
                 landmarker.close()
@@ -203,7 +213,11 @@ class HandTracker:
                 LOGGER.warning("Tracker cleanup warning: %s", exc)
 
     def detect(self, frame_bgr: np.ndarray, timestamp_ms: int) -> list[HandData]:
-        """Detect up to two hands; timestamp_ms must strictly increase."""
+        """Detect up to ``num_hands`` hands; timestamp_ms must strictly increase."""
+        with self._lock:
+            return self._detect(frame_bgr, timestamp_ms)
+
+    def _detect(self, frame_bgr: np.ndarray, timestamp_ms: int) -> list[HandData]:
         if self._landmarker is None:
             raise RuntimeError("HandTracker has been closed.")
         if timestamp_ms <= self._last_timestamp:
@@ -248,4 +262,6 @@ class HandTracker:
                     min(width - 1, max(xs) + pad), min(height - 1, max(ys) + pad))
             hands.append(HandData(category.category_name, float(category.score),
                                   pixels, normalized, bbox))
+        if self.config.num_hands > 2:
+            return hands  # Several people: identity.py sorts out duplicates and labels.
         return resolve_handedness(hands, self.config.duplicate_hand_ratio)

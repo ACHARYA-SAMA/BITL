@@ -1,5 +1,6 @@
 """Desktop settings, input focus, recording and optional services for App."""
 from __future__ import annotations
+from collections import deque
 from dataclasses import replace
 import logging
 import time
@@ -10,6 +11,7 @@ from .cli import RunOptions
 from .config import Config
 from .guide import GestureGuide
 from .menu import Menu
+from .pairing import PairingScreen
 from .profiler import Profiler
 from .quality import AdaptiveQuality, QualityStep
 from .recorder import Recorder
@@ -32,9 +34,10 @@ class DesktopControls:
         c = self.config
         self.settings = settings or Settings(glow=c.glow, show_hud=c.show_hud,
             show_skeleton=c.show_skeleton, color_index=c.default_color, thickness=c.default_thickness,
-            sensitivity=c.detection_confidence, onboarded=True)
+            sensitivity=c.detection_confidence, max_hands=c.num_hands, onboarded=True)
         self.store = store
         self.options = options or RunOptions()
+        self.settings.max_hands = c.num_hands  # --hands wins over the saved value, as --mode does.
         self.audio = AudioManager.disabled(c)
         self.recorder = Recorder(c.output_dir / c.record_folder, c.record_queue)
         self.profiler = Profiler(c.profiler_history)
@@ -44,6 +47,12 @@ class DesktopControls:
         self.segmenter = PersonSegmenter(c)
         self.background = BackgroundModel(c.background_learn_rate)
         self.window = None
+        self.stream = None  # CameraStream or PhoneCamera while run() is active.
+        self.camera_source = self.options.camera_source or self.settings.camera_source
+        self.pairing = PairingScreen(c)
+        self._phone_live = False
+        self._phone_landscape = False
+        self._touches = deque()  # Phone touches waiting to be applied, one press change per frame.
         self._tracker = None
         self._quit = False
         self._frame_number = 0
@@ -103,7 +112,7 @@ class DesktopControls:
         self.gestures.reset(time.perf_counter())
         self.modes.resume()
         self.save_settings()
-        self._apply_sensitivity()
+        self._apply_tracker_settings()
 
     def menu_enabled(self, key: str) -> bool:
         """Show unavailable audio controls explicitly; every other control remains usable."""
@@ -116,7 +125,7 @@ class DesktopControls:
                   'show_skeleton': self.show_skeleton, 'show_hud': self.show_hud,
                   'volume': self.audio.volume, 'muted': self.audio.muted,
                   'record': self.recorder.active or self._pending_record,
-                  'adaptive_quality': self.quality.enabled}
+                  'adaptive_quality': self.quality.enabled, 'camera_source': self.camera_source}
         return values.get(key, getattr(self.settings, key, None))
 
     def menu_change(self, key: str, value: object) -> None:
@@ -147,8 +156,12 @@ class DesktopControls:
                 self.settings.fullscreen = self.window.fullscreen
         elif key == 'record':
             self.toggle_recording()
+        elif key == 'camera_source':
+            self.set_camera_source(str(value))
         elif key in ('sensitivity', 'record_clean'):
             setattr(self.settings, key, value)
+        elif key == 'max_hands':
+            self.settings.max_hands = int(value)
         elif key == 'guide':
             self.open_guide()
         elif key == 'close':
@@ -158,29 +171,32 @@ class DesktopControls:
         elif key == 'reset':
             defaults = Settings(onboarded=True)
             for name in ('mode', 'color_index', 'thickness', 'glow', 'show_skeleton', 'show_hud',
-                         'volume', 'muted', 'sensitivity', 'fullscreen', 'record_clean', 'adaptive_quality'):
+                         'volume', 'muted', 'sensitivity', 'fullscreen', 'record_clean', 'adaptive_quality',
+                         'max_hands'):
                 self.menu_change(name, getattr(defaults, name))
         self.save_settings()
 
-    def _apply_sensitivity(self) -> None:
-        if self._tracker is None or self.settings.sensitivity == self.config.detection_confidence:
+    def _apply_tracker_settings(self) -> None:
+        """Sensitivity and max hands are fixed when MediaPipe's tracker is created:
+        rebuild it (once, when the menu closes) if either changed."""
+        value, hands = self.settings.sensitivity, self.settings.max_hands
+        if self._tracker is None or (value, hands) == (self.config.detection_confidence, self.config.num_hands):
             return
-        value = self.settings.sensitivity
-        config = replace(self.config, detection_confidence=value,
-                         presence_confidence=value, tracking_confidence=value)
+        config = replace(self.config, detection_confidence=value, presence_confidence=value,
+                         tracking_confidence=value, num_hands=hands)
         try:
             self._tracker.reconfigure(config)
             self.config = config
         except (OSError, RuntimeError, ValueError) as exc:
-            LOGGER.warning('Confidence update failed: %s', exc)
-            self.settings.sensitivity = self.config.detection_confidence
-            self.toast('Confidence unchanged; see log')
+            LOGGER.warning('Tracker update failed: %s', exc)
+            self.settings.sensitivity, self.settings.max_hands = self.config.detection_confidence, self.config.num_hands
+            self.toast('Tracking settings unchanged; see log')
             self.save_settings()
 
     def save_settings(self) -> None:
         """Persist user choices, never temporary reductions made by adaptive quality."""
         for key in ('mode', 'color_index', 'thickness', 'glow', 'show_skeleton', 'show_hud',
-                    'volume', 'muted', 'adaptive_quality'):
+                    'volume', 'muted', 'adaptive_quality', 'camera_source'):
             setattr(self.settings, key, self.menu_value(key))
         if self.store is not None:
             self.store.save(self.settings)

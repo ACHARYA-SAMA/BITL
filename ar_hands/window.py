@@ -8,7 +8,9 @@ scale and offset. Menu clicks land where they look, at any window size.
 """
 from __future__ import annotations
 from dataclasses import dataclass
+import ctypes
 import logging
+import sys
 import time
 import cv2
 import numpy as np
@@ -42,6 +44,27 @@ def fit(frame_size: tuple[int, int], canvas_size: tuple[int, int]) -> Letterbox:
     return Letterbox(scale, ((cw - width) // 2, (ch - height) // 2), (cw, ch))
 
 
+def screen_size() -> tuple[int, int] | None:
+    """The primary screen in the same (DPI-scaled) pixels as window sizes; None if unknown."""
+    if sys.platform != "win32":
+        return None
+    try:
+        user32 = ctypes.windll.user32
+        return int(user32.GetSystemMetrics(0)), int(user32.GetSystemMetrics(1))
+    except (AttributeError, OSError):
+        return None
+
+
+def window_size(frame_size: tuple[int, int], screen: tuple[int, int] | None,
+                fill: float = 0.85) -> tuple[int, int]:
+    """The frame's size, shrunk to ``fill`` of the screen with its shape kept:
+    a 720x1280 portrait phone frame must not open a window taller than the screen."""
+    if screen is None:
+        screen = (1280, 800)
+    scale = min(1.0, fill * screen[0] / frame_size[0], fill * screen[1] / frame_size[1])
+    return max(1, round(frame_size[0] * scale)), max(1, round(frame_size[1] * scale))
+
+
 @dataclass
 class MouseState:
     """Latest mouse position in FRAME coordinates and button state."""
@@ -61,6 +84,7 @@ class Window:
         self.fullscreen = False
         self.mouse = MouseState()
         self.letterbox = Letterbox(1.0, (0, 0), frame_size)
+        self._landscape = frame_size[0] >= frame_size[1]
         self._canvas: np.ndarray | None = None
         self.shown = False
         try:
@@ -83,6 +107,11 @@ class Window:
         """Show the frame letterboxed into the window's current client area."""
         size = (frame.shape[1], frame.shape[0])
         self.frame_size = size
+        landscape = size[0] >= size[1]
+        if landscape != self._landscape and not self.fullscreen:
+            # The phone turned: reshape the window instead of letterboxing a tall picture.
+            self._resize(size)
+        self._landscape = landscape
         client = self._client_size()
         if client is None or client == size:
             self.letterbox = Letterbox(1.0, (0, 0), size)
@@ -117,11 +146,17 @@ class Window:
             cv2.setWindowProperty(self.name, cv2.WND_PROP_FULLSCREEN,
                                   cv2.WINDOW_FULLSCREEN if enabled else cv2.WINDOW_NORMAL)
             if not enabled:
-                cv2.resizeWindow(self.name, *self.frame_size)
+                self._resize(self.frame_size)
         except cv2.error as exc:
             LOGGER.warning("Fullscreen toggle failed: %s", exc)
             return
         self.fullscreen = enabled
+
+    def _resize(self, size: tuple[int, int]) -> None:
+        try:
+            cv2.resizeWindow(self.name, *window_size(size, screen_size()))
+        except cv2.error as exc:
+            LOGGER.debug("Window resize: %s", exc)
 
     def is_open(self) -> bool:
         """False once the user closed the window (only meaningful after the first frame)."""

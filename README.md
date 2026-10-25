@@ -18,9 +18,42 @@ Press **?** for the illustrated gesture guide or **Tab** for settings. Hold both
 
 There are four modes: **1 Draw**, **2 Jutsu**, **3 Blocks**, **4 Jujutsu**. Hold the rock sign (index and pinky extended) for one second to cycle modes.
 
+## Use your phone as the camera
+
+Laptop webcams are often dim, grainy and stuck near 15 FPS. Almost any phone films better, and BITL can use it without installing anything on the phone.
+
+1. Press **O** (or pick **Camera: Phone** in Tab settings, or start with `--phone`). A pairing screen with a QR code appears.
+2. Put the phone on the same Wi-Fi as the computer. A phone hotspot works too: connect the computer to it.
+3. Scan the QR code with the phone's camera app and open the link.
+4. The phone warns that the connection is not private. That warning is about BITL's own certificate, which the computer made for itself: tap **Advanced → Proceed** (iPhone: **Show Details → visit this website**). Phones only allow camera access on secure pages, which is why the page uses HTTPS. You accept the warning once per computer.
+5. Choose the selfie or back camera, tap **Start camera** and allow camera access.
+
+The phone sends its video to the computer, which does the tracking and effects as usual. The finished AR picture is shown on the computer **and** on the phone, so the phone works as a remote too. The phone page lets you:
+
+- switch modes, change color, undo, redo, clear, save, snap, record and mute;
+- open the gesture guide or the settings menu and tap them directly on the phone screen;
+- tap the picture to hide the controls, switch between selfie and back camera, and turn the AR picture off to save battery (the computer keeps processing).
+
+The phone page works in portrait and landscape. Hold the phone sideways and the laptop switches to a landscape picture in fullscreen; turn it upright and the window goes back. This works even when the phone's rotation lock is on: the page reads the phone's motion sensor and turns the picture itself (iPhone asks for motion access on **Start**). If the picture is ever on its side, tap the rotate button. In portrait, BITL's own menu, guide and HUD switch to tall layouts so they stay readable on the phone. Sound still plays on the computer.
+
+The phone streams at up to 60 FPS. Its own hardware encodes the video as H.264, about 5 Mbps at 720p, which ordinary Wi-Fi carries easily; browsers without that support send JPEG instead. When the network falls behind, the phone skips frames rather than letting a delay build up, so the picture stays live. The status pill on the phone shows frames per second and the codec in use. The back camera starts with the AR picture on the phone switched off (its screen faces away), which leaves more Wi-Fi for the camera.
+
+Press **O** again to go back to the webcam. The choice is remembered. If the phone disconnects (screen locked, page closed, Wi-Fi drop), the pairing screen returns; reopen the page and it continues. Each run uses a new link, so an old tab says the link expired: scan the new code.
+
+Prefer a phone webcam app such as IP Webcam or DroidCam? Pass its stream URL: `python main.py --camera http://192.168.1.20:8080/video`. Apps that install a virtual webcam driver on the computer (DroidCam, Iriun, Camo) also work through the normal webcam path with `--camera 1`.
+
+## Play as a group
+
+BITL tracks up to **six hands** by default, so three friends can play together. Each hand keeps its own id from frame to frame, and each person's two hands are paired. Everyone can draw, throw fireballs, cast Chidori, pinch blocks and summon Blue and Red at the same time. Two-hand moves belong to the person who makes them: one friend's prayer seal makes their own Great Fireball, and Blue and Red fuse into Hollow Purple only in the same person's hands. The HUD shows how many people it sees.
+
+Stand side by side with your hands in view, about an arm's length or two from the camera. The phone camera in landscape gives everyone the most room. **Max hands** in Tab settings (2, 4, 6 or 8; `--hands N`) trades crowd size for speed: hand detection costs a little more per hand.
+
 ## What's included
 
-- Mirrored webcam tracking of up to two hands using MediaPipe Tasks.
+- Mirrored camera tracking of up to six hands (three people) using MediaPipe Tasks, with stable per-hand ids and per-person two-hand gestures.
+- Phone as the camera over Wi-Fi: QR pairing, no app install, H.264 streaming at up to 60 FPS, auto-rotation, live AR picture and touch controls on the phone.
+- Light that behaves like light: fire, lightning, orbs, sparks and neon drawings bloom like a camera lens sees them and light up your face and the room in their color.
+- Procedural fire with rising, flickering tongues, embers, smoke and heat haze; billowing fireball explosions with a refracting shockwave; branching, strobing lightning.
 - Smoothed neon drawing, seven colors, undo/redo, fading and transparent PNG export.
 - Grid-assisted blocks, stacking, grabbing, beams, point-to-break and punch-to-smash.
 - Fireballs, Chidori, Rasenshuriken and a violet Susanoo behind your body.
@@ -30,12 +63,12 @@ There are four modes: **1 Draw**, **2 Jutsu**, **3 Blocks**, **4 Jujutsu**. Hold
 - Illustrated gesture cards; keyboard, fingertip, dwell, pinch and mouse settings controls.
 - 26 synthesized sound cues, mute and master volume; silent fallback without pygame.
 - MP4 recording with codec fallback and a clean composition option.
-- Latest-frame threaded capture, camera reconnect, detection downscaling, stage timings and adaptive quality.
+- Latest-frame threaded capture, hand detection pipelined on its own thread, 60 FPS display, camera reconnect, stage timings and adaptive quality.
 - Validated per-user settings, rotating logs, headless self-test and a unittest suite.
 
 ## Installation on another computer
 
-Use Python **3.10–3.12** and a webcam. A graphical desktop is needed for the live app. The self-test does not need a webcam or a window.
+Use Python **3.10–3.12** and a webcam (or a phone on the same Wi-Fi). A graphical desktop is needed for the live app. The self-test does not need a webcam or a window.
 
 Windows PowerShell:
 
@@ -99,6 +132,7 @@ Hold gestures steadily until the progress ring fills. Keep your entire hand in v
 |---|---|
 | 1 / 2 / 3 / 4 | Draw / Jutsu / Blocks / Jujutsu |
 | Tab | Open / close settings |
+| O | Phone camera / webcam |
 | ? | Illustrated guide |
 | Arrows, Enter | Navigate and adjust settings; left/right changes values |
 | Left/Right or A/D in guide | Previous / next page |
@@ -135,6 +169,11 @@ Settings live in `%APPDATA%\ARHands\settings.json` on Windows, `~/Library/Applic
 ```bash
 python main.py --help
 python main.py --camera 1 --width 1280 --height 720 --fps 30
+python main.py --phone
+python main.py --phone --phone-port 9000
+python main.py --webcam
+python main.py --phone --hands 8
+python main.py --camera http://192.168.1.20:8080/video
 python main.py --mode jujutsu --detect-scale 0.5 --no-glow
 python main.py --no-audio --no-adaptive
 python main.py --record --debug
@@ -143,15 +182,17 @@ python main.py --selftest
 python main.py --version
 ```
 
-`--camera` sets the first candidate; the other configured camera indices remain fallbacks. `--fps` requests a camera rate; the driver may grant less. `--detect-scale` accepts 0.3–1.0 (default 0.75). F10 exposes the actual bottleneck. Quality lowers glow, then particle count, then detection resolution after sustained overload; it restores detail after sustained headroom. Turn it off in settings or with `--no-adaptive`.
+`--camera` sets the first candidate; the other configured camera indices remain fallbacks. It also accepts a stream URL. `--phone` and `--webcam` choose the camera source for this run and remember it. The phone page listens on port 8765 (`--phone-port`) and tries the next nine ports if that one is busy. `--hands` tracks up to that many hands (2-8, default 6). `--fps` requests a camera rate; the driver may grant less. `--detect-scale` accepts 0.3–1.0 (default 0.75). F10 exposes the actual bottleneck. Quality lowers glow, then particle count, then detection resolution after sustained overload; it restores detail after sustained headroom. Turn it off in settings or with `--no-adaptive`.
 
 ## How it works
 
 The camera worker keeps a single latest frame. Old frames are discarded when the processing loop is busy, preventing a growing delay between your movement and the effect. The frame is mirrored before detection, converted from BGR to RGB, and passed to the modern MediaPipe Tasks HandLandmarker. Its 21 normalized landmarks map back to full webcam resolution even when detection uses a smaller image.
 
+Detection runs on its own thread (`pipeline.py`) while the main thread draws the previous frame, so a frame costs the slower of the two instead of their sum. Between camera frames the last frame is drawn again with effects moved on, so animation stays at 60 FPS even from a 30 FPS camera. On Windows the app also asks for 1 ms timer resolution: by default the `waitKey(1)` every frame needs actually waited about 13 ms. `identity.py` matches each frame's hands to the previous frame's by palm distance, so ids survive classifier Left/Right flips, and pairs each new hand with the nearest person missing that hand.
+
 A One Euro filter smooths slow fingertip jitter while reducing lag during fast movement. Finger bends and distances become gesture candidates; hysteresis and a stabilizer reject brief flickers. A small event bus dispatches stable gestures and timed holds. Each mode subscribes only its own controllers. Opening an overlay detaches gameplay subscriptions and ends drawing strokes; closing resets gesture history before resuming.
 
-Neon drawing and luminous effects add light to the camera image. Solid blocks use alpha compositing and simple physics. Person segmentation places your body in front of domains and Susanoo. Dust captures a person-shaped ghost and erodes it into particles over an estimated background. These are procedural, stylized effects; no downloaded artwork is required.
+Glowing effects and the neon drawing draw into a separate light buffer (`effects/lighting.py`). Its highlights bloom like a lens sees them, and a wide blur of it acts as a light map that brightens the camera picture in the light's color, so fire warms your face and Chidori flashes it blue. Fire is a procedural heat field (`effects/flame.py`): streaky noise scrolled along the flow and colored by temperature, with heat haze and shockwaves that bend the picture itself. Solid blocks use alpha compositing and simple physics. Person segmentation places your body in front of domains and Susanoo. Dust captures a person-shaped ghost and erodes it into particles over an estimated background. These are procedural, stylized effects; no downloaded artwork is required.
 
 ```text
 CameraStream -> latest frame -> mirror -> HandTracker -> HandData
@@ -187,11 +228,15 @@ python tools/live_smoke.py
 
 The last command opens the real camera/window for ten seconds and saves metrics only. Synthetic previews go to `verification/phase5/`; they use a drawn silhouette, not a real camera photograph. The automated tests cover gesture recognition, drawing, blocks/physics, sprite clipping, particle caps, menu focus, new effects, settings, camera threading, recording timing/failures, quality adaptation and profiling.
 
+On 25 October 2026, with a simulated phone streaming 720p H.264 at 60 FPS into the real app on this laptop, the laptop received 59 FPS and displayed **60 FPS**, and sent the finished picture back to the phone at 58 FPS. With a fireball exploding every second (the heaviest effect load), display dropped to about 46 FPS. Hand detection took 12-17 ms on its own thread. Six-hand detection could not be measured without six real hands in view.
+
 On this Windows laptop, the 24 October 2026 hardware smoke check opened camera 0 at 1280×720 and measured roughly **15–20 FPS** (camera-limited) despite a reported camera setting of 30; processing took about 28 ms per frame, so the pipeline itself could sustain about 36 FPS. It initialized 26 sounds and processed all four modes without a frame error. Synthetic 720p effect-only timings were approximately 3–4 ms for orbs/Rasenshuriken, 13–16 ms for domains/Susanoo and 26 ms for dust, excluding tracking and display. These are local measurements, not a cross-device guarantee. First-use scene generation costs more.
 
 Live gesture accuracy, visual likeness and a physical unplug/replug still deserve the manual checks in [docs/PHASE5_QA.md](docs/PHASE5_QA.md). See [docs/PORTFOLIO.md](docs/PORTFOLIO.md) for truthful resume bullets, a demo script and design questions.
 
 ## Packaging
+
+BITL is a desktop app, so there is no website to host: `vercel.json` turns off Vercel deployments for git pushes. Without it, a Vercel project linked to this repository sees `requirements.txt` and `main.py`, expects a Python web server, and fails every build.
 
 Build the wheel:
 
@@ -214,6 +259,12 @@ In Windows PowerShell, use double quotes around `.[audio,build]`. The spec bundl
 Build separately on Windows, macOS and Linux; this is not a cross-compiler. On macOS allow camera access for the terminal/executable; signing and notarization are separate distribution steps. On Linux use a graphical session with the OpenCV GUI dependencies available. The console build keeps startup and camera errors visible. A standalone build recipe is provided; validation on other operating systems remains outstanding.
 
 ## Troubleshooting
+
+- **Phone cannot open the page:** both devices must be on the same network, and guest or campus Wi-Fi often blocks devices from reaching each other; use the phone's hotspot instead. On Windows, allow BITL (or Python) through the firewall when asked; if you clicked Cancel, allow it under Windows Security → Firewall → Allow an app. A VPN on the computer can pick the wrong address: the pairing screen shows the link it uses.
+- **Phone says the camera is blocked:** open the page from the QR code (it must start with `https://`), accept the certificate warning, then allow the camera. If you denied it, re-enable camera access for the site in the browser's site settings and reload.
+- **Phone picture is choppy:** check the phone's status pill. JPEG instead of H.264 means the browser cannot encode H.264 (update it) or PyAV is missing on the computer (`pip install av`). Move closer to the router (5 GHz Wi-Fi is better), close other heavy Wi-Fi use, or turn off the AR picture on the phone (eye button) so only the upload remains. F10 on the laptop shows whether detection or effects are the bottleneck.
+- **Picture on its side:** tap the rotate button on the phone; each tap turns it 90°.
+- **A friend's hands are not tracked:** raise Max hands, bring everyone a little closer and into the light, and keep hands from overlapping. Very small, far-away hands are below what the hand model detects.
 
 - **Camera missing/black:** close camera apps, check OS permissions/privacy shutter, then try `--camera 1`. The app retries automatically; Tab and Q stay responsive. An unresponsive native camera driver can outlive shutdown briefly as a daemon thread.
 - **Model download fails:** the log gives the model URL and destination. Check connectivity or copy the model to the reported path. Run `--selftest` again.

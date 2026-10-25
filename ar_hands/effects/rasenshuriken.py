@@ -83,6 +83,7 @@ class Rasenshuriken(Projectile):
 
     name = "rasenshuriken"
     layer = 32
+    emissive = True
 
     def __init__(self, owner: str, position: Point, radius: float, now: float) -> None:
         """Start forming (core first, then blades)."""

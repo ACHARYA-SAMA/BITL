@@ -32,9 +32,22 @@ def fourcc_name(code: float) -> str:
     return text if text.isprintable() and text.strip() else f"0x{value:08x}"
 
 
+def open_stream_url(url: str) -> cv2.VideoCapture:
+    """Open an MJPEG/RTSP stream from a phone webcam app (IP Webcam, DroidCam...)."""
+    cap = cv2.VideoCapture(url, cv2.CAP_FFMPEG)
+    if cap.isOpened():
+        LOGGER.info("Camera stream %s: %.0fx%.0f", url, cap.get(cv2.CAP_PROP_FRAME_WIDTH),
+                    cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        return cap
+    cap.release()
+    raise AppError(f"Camera stream {url} did not open. Check the phone app is running and on this Wi-Fi.")
+
+
 def open_camera(config: Config) -> cv2.VideoCapture:
     """Try cameras 0-2, preferring DirectShow on Windows with default fallback."""
     c = config
+    if c.camera_url:
+        return open_stream_url(c.camera_url)
     backends = (cv2.CAP_DSHOW, None) if sys.platform == "win32" else (None,)
     for index in c.camera_indices:
         for backend in backends:

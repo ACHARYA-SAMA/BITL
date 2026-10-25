@@ -4,7 +4,7 @@ from PyInstaller.utils.hooks import collect_all
 
 root = Path(SPECPATH)
 mp_data, mp_bins, mp_hidden = collect_all('mediapipe')
-data = mp_data + [(str(root / 'models'), 'models')]
+data = mp_data + [(str(root / 'models'), 'models'), (str(root / 'ar_hands' / 'web'), 'ar_hands/web')]
 for folder in ('assets/sounds', 'assets/sprites'):
     if (root / folder).is_dir():
         data.append((str(root / folder), folder))

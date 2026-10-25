@@ -18,12 +18,30 @@ class RunOptions:
     selftest: bool = False
     adaptive: bool = True
     mode: str | None = None
+    camera_source: str | None = None  # "Phone" or "Webcam" for this run; None = saved setting.
+
+
+def camera_arg(text: str) -> int | str:
+    """A camera index, or a stream URL from a phone webcam app."""
+    try:
+        return int(text)  # Negative indexes are rejected by build_config with a clear message.
+    except ValueError:
+        pass
+    if text.lower().startswith(("http://", "https://", "rtsp://")):
+        return text
+    raise argparse.ArgumentTypeError("expected a camera index (0, 1, ...) or a stream URL (http://...)")
 
 
 def parser() -> argparse.ArgumentParser:
     """The ar-hands argument parser."""
     p = argparse.ArgumentParser(prog="ar-hands", description="Real-time AR hand effects for your webcam.")
-    p.add_argument("--camera", type=int, metavar="INDEX", help="camera index to try first (default 0)")
+    p.add_argument("--camera", type=camera_arg, metavar="INDEX|URL",
+                   help="camera index to try first (default 0), or a stream URL from a phone webcam app")
+    p.add_argument("--phone", action="store_true",
+                   help="use your phone as the camera: scan the QR code shown on start")
+    p.add_argument("--webcam", action="store_true", help="use this computer's webcam even if Phone was saved")
+    p.add_argument("--phone-port", type=int, metavar="PORT", help="port of the phone camera page (default 8765)")
+    p.add_argument("--hands", type=int, metavar="N", help="track up to N hands at once, 2-8 (default 6)")
     p.add_argument("--width", type=int, help="requested capture width (default 1280)")
     p.add_argument("--height", type=int, help="requested capture height (default 720)")
     p.add_argument("--fps", type=int, help="requested capture frame rate (default 30)")
@@ -48,18 +66,31 @@ def build_config(args: argparse.Namespace, settings: Settings, base: Config | No
     config = replace(config, glow=settings.glow, show_skeleton=settings.show_skeleton,
                      show_hud=settings.show_hud, default_color=settings.color_index,
                      default_thickness=settings.thickness, detection_confidence=settings.sensitivity,
-                     presence_confidence=settings.sensitivity, tracking_confidence=settings.sensitivity)
+                     presence_confidence=settings.sensitivity, tracking_confidence=settings.sensitivity,
+                     num_hands=settings.max_hands)
     # Then flags, which always win.
     changes = {}
     for name in ('width', 'height', 'fps'):
         value = getattr(args, name)
         if value is not None and value <= 0:
             raise ValueError(f'--{name} must be positive')
-    if args.camera is not None and args.camera < 0:
+    if args.phone and args.webcam:
+        raise ValueError('choose either --phone or --webcam')
+    if args.phone_port is not None and not 0 <= args.phone_port <= 65535:
+        raise ValueError('--phone-port must be between 0 and 65535')
+    if isinstance(args.camera, int) and args.camera < 0:
         raise ValueError('--camera must be nonnegative')
-    if args.camera is not None:
+    if isinstance(args.camera, str):
+        changes["camera_url"] = args.camera
+    elif args.camera is not None:
         others = tuple(i for i in config.camera_indices if i != args.camera)
         changes["camera_indices"] = (args.camera, *others)
+    if args.phone_port is not None:
+        changes["phone_port"] = args.phone_port
+    if args.hands is not None:
+        if not 2 <= args.hands <= 8:
+            raise ValueError('--hands must be between 2 and 8')
+        changes["num_hands"] = args.hands
     if args.width is not None:
         changes["width"] = args.width
     if args.height is not None:
@@ -76,7 +107,10 @@ def build_config(args: argparse.Namespace, settings: Settings, base: Config | No
         changes["show_debug"] = True
     config = replace(config, **changes)
     mode = args.mode.title() if args.mode else settings.mode
+    # A stream URL is a webcam-style source, so it also overrides a saved Phone choice.
+    source = "Phone" if args.phone else "Webcam" if args.webcam or "camera_url" in changes else None
     options = RunOptions(audio=not args.no_audio, record=args.record, debug=args.debug,
                          reset_settings=args.reset_settings, selftest=args.selftest,
-                         adaptive=settings.adaptive_quality and not args.no_adaptive, mode=mode)
+                         adaptive=settings.adaptive_quality and not args.no_adaptive, mode=mode,
+                         camera_source=source)
     return config, options
