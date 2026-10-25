@@ -236,6 +236,8 @@ Live gesture accuracy, visual likeness and a physical unplug/replug still deserv
 
 ## Packaging
 
+BITL is a desktop app, so there is no website to host: `vercel.json` turns off Vercel deployments for git pushes. Without it, a Vercel project linked to this repository sees `requirements.txt` and `main.py`, expects a Python web server, and fails every build.
+
 Build the wheel:
 
 ```bash
