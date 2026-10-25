@@ -1,0 +1,234 @@
+test_cache_and_real_transparency (test_drawing.CanvasTests.test_cache_and_real_transparency) ... ok
+test_fade_removes_finished_but_keeps_active_strokes (test_drawing.CanvasTests.test_fade_removes_finished_but_keeps_active_strokes) ... ok
+test_finishing_crossing_stroke_does_not_change_appearance (test_drawing.CanvasTests.test_finishing_crossing_stroke_does_not_change_appearance) ... ok
+test_resize_preserves_strokes_and_rebuilds_cache (test_drawing.CanvasTests.test_resize_preserves_strokes_and_rebuilds_cache) ... ok
+test_short_strokes_spacing_and_independent_hands (test_drawing.CanvasTests.test_short_strokes_spacing_and_independent_hands) ... ok
+test_undo_redo_and_new_stroke_invalidate_redo (test_drawing.CanvasTests.test_undo_redo_and_new_stroke_invalidate_redo) ... ok
+test_palette_thickness_history_export_and_toggles (test_drawing.DrawingControlsTests.test_palette_thickness_history_export_and_toggles) ... ok
+test_bindings_drive_the_same_actions_as_keys (test_drawing.GestureActionTests.test_bindings_drive_the_same_actions_as_keys) ... ok
+test_frames_draw_by_pointing_with_debug_overlay_and_hold_ring (test_drawing.GestureActionTests.test_frames_draw_by_pointing_with_debug_overlay_and_hold_ring) ... Person segmentation unavailable (model file missing at C:\Users\ARMANA~1\AppData\Local\Temp\tmpequqldof\models\selfie_segmenter.tflite (it downloads at startup when online)); effects will use overlays.
+ok
+test_hold_to_clear_is_ignored_while_the_other_hand_draws (test_drawing.GestureActionTests.test_hold_to_clear_is_ignored_while_the_other_hand_draws) ... Person segmentation unavailable (model file missing at C:\Users\ARMANA~1\AppData\Local\Temp\tmpd2xes3x8\models\selfie_segmenter.tflite (it downloads at startup when online)); effects will use overlays.
+ok
+test_mode_keys_and_function_key_colors (test_drawing.GestureActionTests.test_mode_keys_and_function_key_colors) ... ok
+test_motion_adaptation_and_separate_axes (test_drawing.SmoothingTests.test_motion_adaptation_and_separate_axes) ... ok
+test_timestamp_spacing_and_reset (test_drawing.SmoothingTests.test_timestamp_spacing_and_reset) ... ok
+test_blocks_land_on_placed_beams (test_effects.BlockTests.test_blocks_land_on_placed_beams) ... ok
+test_blocks_stack (test_effects.BlockTests.test_blocks_stack) ... ok
+test_cap_fades_the_oldest (test_effects.BlockTests.test_cap_fades_the_oldest) ... ok
+test_explosion_flings_nearby_blocks (test_effects.BlockTests.test_explosion_flings_nearby_blocks) ... ok
+test_falls_to_floor_and_sleeps_without_jitter (test_effects.BlockTests.test_falls_to_floor_and_sleeps_without_jitter) ... ok
+test_hand_lost_while_holding_releases_the_block (test_effects.BlockTests.test_hand_lost_while_holding_releases_the_block) ... ok
+test_peace_cycles_type_and_thumbs_up_hold_clears (test_effects.BlockTests.test_peace_cycles_type_and_thumbs_up_hold_clears) ... ok
+test_pinch_spawns_a_block_that_follows_and_drops (test_effects.BlockTests.test_pinch_spawns_a_block_that_follows_and_drops) ... ok
+test_pinching_an_existing_block_moves_it_instead_of_spawning (test_effects.BlockTests.test_pinching_an_existing_block_moves_it_instead_of_spawning) ... ok
+test_pointing_cracks_then_breaks_a_block (test_effects.BlockTests.test_pointing_cracks_then_breaks_a_block) ... ok
+test_removing_a_support_wakes_the_stack (test_effects.BlockTests.test_removing_a_support_wakes_the_stack) ... ok
+test_short_beam_fizzles (test_effects.BlockTests.test_short_beam_fizzles) ... ok
+test_tnt_ignites_then_chain_explodes (test_effects.BlockTests.test_tnt_ignites_then_chain_explodes) ... ok
+test_two_hand_pinch_touch_and_pull_builds_a_beam (test_effects.BlockTests.test_two_hand_pinch_touch_and_pull_builds_a_beam) ... ok
+test_blend_modes_and_three_channel_sprites (test_effects.CompositingTests.test_blend_modes_and_three_channel_sprites) ... ok
+test_clips_at_every_edge_and_corner (test_effects.CompositingTests.test_clips_at_every_edge_and_corner) ... ok
+test_fully_offscreen_returns_before_resampling (test_effects.CompositingTests.test_fully_offscreen_returns_before_resampling) ... ok
+test_premultiplied_rotation_has_no_dark_fringe (test_effects.CompositingTests.test_premultiplied_rotation_has_no_dark_fringe) ... ok
+test_prepared_sprite_matches_raw_image (test_effects.CompositingTests.test_prepared_sprite_matches_raw_image) ... ok
+test_rotation_keeps_corners (test_effects.CompositingTests.test_rotation_keeps_corners) ... ok
+test_fireball_and_twenty_blocks_fit_the_eight_ms_budget (test_effects.HookAndBudgetTests.test_fireball_and_twenty_blocks_fit_the_eight_ms_budget) ... ok
+test_hook_listener_errors_are_isolated (test_effects.HookAndBudgetTests.test_hook_listener_errors_are_isolated) ... ok
+test_chidori_charge_release_and_fade (test_effects.JutsuTests.test_chidori_charge_release_and_fade) ... ok
+test_cooldown_between_summons (test_effects.JutsuTests.test_cooldown_between_summons) ... ok
+test_fist_dissipates_with_smoke (test_effects.JutsuTests.test_fist_dissipates_with_smoke) ... ok
+test_flick_throws_and_it_explodes_off_screen (test_effects.JutsuTests.test_flick_throws_and_it_explodes_off_screen) ... ok
+test_lost_hand_holds_then_dissipates (test_effects.JutsuTests.test_lost_hand_holds_then_dissipates) ... ok
+test_midpoint_bolt_keeps_its_endpoints (test_effects.JutsuTests.test_midpoint_bolt_keeps_its_endpoints) ... ok
+test_open_palm_hold_summons_after_half_second_sized_by_hand (test_effects.JutsuTests.test_open_palm_hold_summons_after_half_second_sized_by_hand) ... ok
+test_open_palm_without_charge_is_a_fireball_not_chidori (test_effects.JutsuTests.test_open_palm_without_charge_is_a_fireball_not_chidori) ... ok
+test_prayer_then_hands_apart_casts_the_great_fireball (test_effects.JutsuTests.test_prayer_then_hands_apart_casts_the_great_fireball) ... ok
+test_leaving_jutsu_dissipates_held_fireballs (test_effects.ModeTests.test_leaving_jutsu_dissipates_held_fireballs) ... ok
+test_no_orphaned_effects_after_tracking_loss (test_effects.ModeTests.test_no_orphaned_effects_after_tracking_loss) ... ok
+test_rock_hold_cycles_to_the_next_mode (test_effects.ModeTests.test_rock_hold_cycles_to_the_next_mode) ... ok
+test_switching_modes_never_leaks_subscriptions (test_effects.ModeTests.test_switching_modes_never_leaks_subscriptions) ... ok
+test_cap_and_recycling_of_the_oldest (test_effects.ParticleTests.test_cap_and_recycling_of_the_oldest) ... ok
+test_dt_is_clamped (test_effects.ParticleTests.test_dt_is_clamped) ... ok
+test_frame_rate_independent_motion (test_effects.ParticleTests.test_frame_rate_independent_motion) ... ok
+test_smoke_darkens_a_bright_background (test_effects.ParticleTests.test_smoke_darkens_a_bright_background) ... ok
+test_thousand_particles_render_under_four_ms (test_effects.ParticleTests.test_thousand_particles_render_under_four_ms) ... ok
+test_procedural_sprites_are_deterministic_bgra (test_effects.SpriteTests.test_procedural_sprites_are_deterministic_bgra) ... ok
+test_user_png_overrides_and_bad_files_warn (test_effects.SpriteTests.test_user_png_overrides_and_bad_files_warn) ... ok
+test_broken_subscriber_never_crashes_the_engine (test_gestures.EngineTests.test_broken_subscriber_never_crashes_the_engine) ... ok
+test_hands_apart_fires_once_and_distance_grows (test_gestures.EngineTests.test_hands_apart_fires_once_and_distance_grows) ... ok
+test_hold_progress_and_on_hold_for (test_gestures.EngineTests.test_hold_progress_and_on_hold_for) ... ok
+test_jittered_hand_stays_one_steady_gesture (test_gestures.EngineTests.test_jittered_hand_stays_one_steady_gesture) ... ok
+test_pinch_hysteresis_holds_inside_the_band (test_gestures.EngineTests.test_pinch_hysteresis_holds_inside_the_band) ... ok
+test_point_lifecycle_and_lost_hand_grace (test_gestures.EngineTests.test_point_lifecycle_and_lost_hand_grace) ... ok
+test_reset_ends_active_gestures (test_gestures.EngineTests.test_reset_ends_active_gestures) ... ok
+test_single_frame_misdetections_never_fire (test_gestures.EngineTests.test_single_frame_misdetections_never_fire) ... ok
+test_swipes_fire_for_an_open_hand_but_not_while_drawing (test_gestures.EngineTests.test_swipes_fire_for_an_open_hand_but_not_while_drawing) ... ok
+test_two_hand_prayer_and_fists_use_both (test_gestures.EngineTests.test_two_hand_prayer_and_fists_use_both) ... ok
+test_update_costs_well_under_one_millisecond (test_gestures.EngineTests.test_update_costs_well_under_one_millisecond) ... ok
+test_filters_and_unsubscribe (test_gestures.EventBusTests.test_filters_and_unsubscribe) ... ok
+test_hold_needs_a_start_after_subscribing (test_gestures.EventBusTests.test_hold_needs_a_start_after_subscribing) ... ok
+test_on_hold_for_fires_once_per_activation_with_progress (test_gestures.EventBusTests.test_on_hold_for_fires_once_per_activation_with_progress) ... ok
+test_throwing_callback_is_logged_and_isolated (test_gestures.EventBusTests.test_throwing_callback_is_logged_and_isolated) ... ok
+test_unsubscribing_during_dispatch_skips_the_removed_callback (test_gestures.EventBusTests.test_unsubscribing_during_dispatch_skips_the_removed_callback) ... ok
+test_finger_states (test_gestures.FeatureTests.test_finger_states) ... ok
+test_palm_normal_sign_follows_handedness_in_the_mirrored_view (test_gestures.FeatureTests.test_palm_normal_sign_follows_handedness_in_the_mirrored_view) ... ok
+test_pinch_ratio_and_strength (test_gestures.FeatureTests.test_pinch_ratio_and_strength) ... ok
+test_scale_center_and_roll (test_gestures.FeatureTests.test_scale_center_and_roll) ... ok
+test_tiny_hand_has_no_features (test_gestures.FeatureTests.test_tiny_hand_has_no_features) ... ok
+test_cooldown_spaces_out_swipes_and_blocks_the_return_stroke (test_gestures.MotionTests.test_cooldown_spaces_out_swipes_and_blocks_the_return_stroke) ... ok
+test_push_amount_sign (test_gestures.MotionTests.test_push_amount_sign) ... ok
+test_single_glitch_frame_never_swipes (test_gestures.MotionTests.test_single_glitch_frame_never_swipes) ... ok
+test_slow_or_diagonal_motion_is_not_a_swipe (test_gestures.MotionTests.test_slow_or_diagonal_motion_is_not_a_swipe) ... ok
+test_swipe_directions (test_gestures.MotionTests.test_swipe_directions) ... ok
+test_velocity_is_distance_invariant (test_gestures.MotionTests.test_velocity_is_distance_invariant) ... ok
+test_every_pose_for_both_hands (test_gestures.RecognizerTests.test_every_pose_for_both_hands) ... ok
+test_fist_never_reads_as_pinch_or_thumbs_up (test_gestures.RecognizerTests.test_fist_never_reads_as_pinch_or_thumbs_up) ... ok
+test_partial_ring_is_neither_peace_nor_three (test_gestures.RecognizerTests.test_partial_ring_is_neither_peace_nor_three) ... ok
+test_roll_invariance_through_a_full_turn (test_gestures.RecognizerTests.test_roll_invariance_through_a_full_turn) ... ok
+test_rule_order_resolves_overlaps (test_gestures.RecognizerTests.test_rule_order_resolves_overlaps) ... ok
+test_scale_invariance_from_50_to_300_pixels (test_gestures.RecognizerTests.test_scale_invariance_from_50_to_300_pixels) ... ok
+test_thumbs_up_documented_roll_range (test_gestures.RecognizerTests.test_thumbs_up_documented_roll_range) ... ok
+test_translation_and_noise_robustness (test_gestures.RecognizerTests.test_translation_and_noise_robustness) ... ok
+test_alternating_noise_does_not_chatter (test_gestures.StabilizerTests.test_alternating_noise_does_not_chatter) ... ok
+test_direct_switch_hands_over_in_one_frame (test_gestures.StabilizerTests.test_direct_switch_hands_over_in_one_frame) ... ok
+test_entry_and_exit_take_documented_frames (test_gestures.StabilizerTests.test_entry_and_exit_take_documented_frames) ... ok
+test_lost_hand_ends_after_grace (test_gestures.StabilizerTests.test_lost_hand_ends_after_grace) ... ok
+test_rejects_a_two_frame_flicker (test_gestures.StabilizerTests.test_rejects_a_two_frame_flicker) ... ok
+test_schmitt_trigger_does_not_chatter (test_gestures.StabilizerTests.test_schmitt_trigger_does_not_chatter) ... ok
+test_camera_exhaustion (test_main.AppTests.test_camera_exhaustion) ... ok
+test_camera_requests_compressed_format_after_size_and_fps (test_main.AppTests.test_camera_requests_compressed_format_after_size_and_fps) ... ok
+test_failures_and_interrupt_always_release_resources (test_main.AppTests.test_failures_and_interrupt_always_release_resources) ... Frame skipped after a processing error
+Traceback (most recent call last):
+  File "C:\Users\Arman Acharya\OneDrive\Desktop\BITL(BRING IDEAS TO LIFE)\ar_hands\app.py", line 476, in run
+    last_frame = self.process_frame(packet.frame, tracker)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Arman Acharya\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\unittest\mock.py", line 1139, in __call__
+    return self._mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Arman Acharya\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\unittest\mock.py", line 1143, in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Arman Acharya\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\unittest\mock.py", line 1198, in _execute_mock_call
+    raise effect
+ValueError: bad frame
+Frame skipped after a processing error
+Traceback (most recent call last):
+  File "C:\Users\Arman Acharya\OneDrive\Desktop\BITL(BRING IDEAS TO LIFE)\ar_hands\app.py", line 476, in run
+    last_frame = self.process_frame(packet.frame, tracker)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Arman Acharya\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\unittest\mock.py", line 1139, in __call__
+    return self._mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Arman Acharya\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\unittest\mock.py", line 1143, in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Arman Acharya\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\unittest\mock.py", line 1198, in _execute_mock_call
+    raise effect
+  File "C:\Users\Arman Acharya\OneDrive\Desktop\BITL(BRING IDEAS TO LIFE)\ar_hands\app.py", line 476, in run
+    last_frame = self.process_frame(packet.frame, tracker)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Arman Acharya\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\unittest\mock.py", line 1139, in __call__
+    return self._mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Arman Acharya\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\unittest\mock.py", line 1143, in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Arman Acharya\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\unittest\mock.py", line 1198, in _execute_mock_call
+    raise effect
+ValueError: bad frame
+Frame skipped after a processing error
+Traceback (most recent call last):
+  File "C:\Users\Arman Acharya\OneDrive\Desktop\BITL(BRING IDEAS TO LIFE)\ar_hands\app.py", line 476, in run
+    last_frame = self.process_frame(packet.frame, tracker)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Arman Acharya\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\unittest\mock.py", line 1139, in __call__
+    return self._mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Arman Acharya\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\unittest\mock.py", line 1143, in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Arman Acharya\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\unittest\mock.py", line 1198, in _execute_mock_call
+    raise effect
+  File "C:\Users\Arman Acharya\OneDrive\Desktop\BITL(BRING IDEAS TO LIFE)\ar_hands\app.py", line 476, in run
+    last_frame = self.process_frame(packet.frame, tracker)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Arman Acharya\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\unittest\mock.py", line 1139, in __call__
+    return self._mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Arman Acharya\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\unittest\mock.py", line 1143, in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Arman Acharya\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\unittest\mock.py", line 1198, in _execute_mock_call
+    raise effect
+  File "C:\Users\Arman Acharya\OneDrive\Desktop\BITL(BRING IDEAS TO LIFE)\ar_hands\app.py", line 476, in run
+    last_frame = self.process_frame(packet.frame, tracker)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Arman Acharya\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\unittest\mock.py", line 1139, in __call__
+    return self._mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Arman Acharya\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\unittest\mock.py", line 1143, in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Arman Acharya\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\unittest\mock.py", line 1198, in _execute_mock_call
+    raise effect
+ValueError: bad frame
+ok
+test_mirror_precedes_detection_and_rendering (test_main.AppTests.test_mirror_precedes_detection_and_rendering) ... ok
+test_renderer_supports_every_overlay_combination (test_main.AppTests.test_renderer_supports_every_overlay_combination) ... ok
+test_toggles_and_screenshot (test_main.AppTests.test_toggles_and_screenshot) ... ok
+test_window_close_exits_without_recreating_window (test_main.AppTests.test_window_close_exits_without_recreating_window) ... ok
+test_windows_camera_fallback_releases_failed_candidates (test_main.AppTests.test_windows_camera_fallback_releases_failed_candidates) ... ok
+test_complete_bundle_is_cached_atomically (test_main.DownloadTests.test_complete_bundle_is_cached_atomically) ... ok
+test_existing_model_avoids_network (test_main.DownloadTests.test_existing_model_avoids_network) ... ok
+test_failed_download_is_actionable_and_leaves_no_partial_file (test_main.DownloadTests.test_failed_download_is_actionable_and_leaves_no_partial_file) ... ok
+test_truncated_transfer_is_not_cached (test_main.DownloadTests.test_truncated_transfer_is_not_cached) ... ok
+test_clock_collisions_still_increase (test_main.TrackerTests.test_clock_collisions_still_increase) ... ok
+test_conversion_color_order_bounds_and_timestamp_contract (test_main.TrackerTests.test_conversion_color_order_bounds_and_timestamp_contract) ... ok
+test_distance_and_landmark_constants (test_main.TrackerTests.test_distance_and_landmark_constants) ... ok
+test_duplicate_handedness_is_resolved_by_position_or_dropped (test_main.TrackerTests.test_duplicate_handedness_is_resolved_by_position_or_dropped) ... ok
+test_fps_smoothing (test_main.TrackerTests.test_fps_smoothing) ... ok
+test_both_hands_draw_independent_strokes (test_pen.PenTests.test_both_hands_draw_independent_strokes) ... ok
+test_brief_dropout_resumes_the_same_stroke_nearby (test_pen.PenTests.test_brief_dropout_resumes_the_same_stroke_nearby) ... ok
+test_curling_stops_ink_at_once_then_closes_the_stroke (test_pen.PenTests.test_curling_stops_ink_at_once_then_closes_the_stroke) ... ok
+test_duplicate_labels_keep_the_confident_hand (test_pen.PenTests.test_duplicate_labels_keep_the_confident_hand) ... ok
+test_far_resume_after_a_dry_pause_starts_a_new_stroke (test_pen.PenTests.test_far_resume_after_a_dry_pause_starts_a_new_stroke) ... ok
+test_long_loss_finishes_the_stroke_and_reentry_starts_clean (test_pen.PenTests.test_long_loss_finishes_the_stroke_and_reentry_starts_clean) ... ok
+test_missing_hand_keeps_the_pen_down_without_ink (test_pen.PenTests.test_missing_hand_keeps_the_pen_down_without_ink) ... ok
+test_one_frame_teleport_splits_the_stroke (test_pen.PenTests.test_one_frame_teleport_splits_the_stroke) ... ok
+test_pointing_draws_once_stable_and_backfills_the_start (test_pen.PenTests.test_pointing_draws_once_stable_and_backfills_the_start) ... ok
+test_reset_finishes_strokes_and_drawing_resumes_as_a_new_stroke (test_pen.PenTests.test_reset_finishes_strokes_and_drawing_resumes_as_a_new_stroke) ... ok
+test_returning_far_away_after_a_dropout_never_bridges (test_pen.PenTests.test_returning_far_away_after_a_dropout_never_bridges) ... ok
+test_arrow_keys_do_not_quit (test_phase5.IntegrationTests.test_arrow_keys_do_not_quit) ... ok
+test_blue_and_red_fuse_into_purple (test_phase5.IntegrationTests.test_blue_and_red_fuse_into_purple) ... ok
+test_both_fists_summon_susanoo (test_phase5.IntegrationTests.test_both_fists_summon_susanoo) ... ok
+test_camera_resize_during_dust_keeps_pipeline_working (test_phase5.IntegrationTests.test_camera_resize_during_dust_keeps_pipeline_working) ... ok
+test_capital_f_is_fullscreen_lower_f_is_fade (test_phase5.IntegrationTests.test_capital_f_is_fullscreen_lower_f_is_fade) ... ok
+test_fourth_mode_is_reachable_and_has_effects (test_phase5.IntegrationTests.test_fourth_mode_is_reachable_and_has_effects) ... ok
+test_menu_captures_drawing_and_restores_controls (test_phase5.IntegrationTests.test_menu_captures_drawing_and_restores_controls) ... ok
+test_menu_dwell_and_pinch_slider (test_phase5.IntegrationTests.test_menu_dwell_and_pinch_slider) ... ok
+test_new_jutsu_and_domain_gestures_dispatch (test_phase5.IntegrationTests.test_new_jutsu_and_domain_gestures_dispatch) ... ok
+test_opening_menu_does_not_click_with_already_held_pinch (test_phase5.IntegrationTests.test_opening_menu_does_not_click_with_already_held_pinch) ... ok
+test_renderers_handle_person_mask_and_camera_resize (test_phase5.IntegrationTests.test_renderers_handle_person_mask_and_camera_resize) ... ok
+test_two_palms_menu_does_not_clear_existing_drawing (test_phase5.IntegrationTests.test_two_palms_menu_does_not_clear_existing_drawing) ... ok
+test_two_palms_open_menu_in_every_mode (test_phase5.IntegrationTests.test_two_palms_open_menu_in_every_mode) ... ok
+test_audio_missing_or_disabled_is_silent (test_phase5.ServiceTests.test_audio_missing_or_disabled_is_silent) ... ok
+test_camera_dimensions_are_validated (test_phase5.ServiceTests.test_camera_dimensions_are_validated) ... ok
+test_camera_thread_errors_surface (test_phase5.ServiceTests.test_camera_thread_errors_surface) ... ok
+test_cli_precedence (test_phase5.ServiceTests.test_cli_precedence) ... ok
+test_installed_package_uses_writable_user_resources (test_phase5.ServiceTests.test_installed_package_uses_writable_user_resources) ... ok
+test_latest_frame_and_release (test_phase5.ServiceTests.test_latest_frame_and_release) ... ok
+test_letterbox_maps_pixels_and_rejects_bars (test_phase5.ServiceTests.test_letterbox_maps_pixels_and_rejects_bars) ... ok
+test_profiler_measures_and_bounds_history (test_phase5.ServiceTests.test_profiler_measures_and_bounds_history) ... ok
+test_quality_waits_then_restores_with_headroom (test_phase5.ServiceTests.test_quality_waits_then_restores_with_headroom) ... ok
+test_recorder_reports_final_flush_failure (test_phase5.ServiceTests.test_recorder_reports_final_flush_failure) ... Video writer release warning: final flush failed
+ok
+test_recorder_stop_does_not_deadlock_after_encoder_failure (test_phase5.ServiceTests.test_recorder_stop_does_not_deadlock_after_encoder_failure) ... ok
+test_recording_resamples_wall_clock (test_phase5.ServiceTests.test_recording_resamples_wall_clock) ... ok
+test_settings_validation_and_corruption_recovery (test_phase5.ServiceTests.test_settings_validation_and_corruption_recovery) ... Settings file is corrupt (Expecting property name enclosed in double quotes: line 1 column 2 (char 1)); moved to C:\Users\ARMANA~1\AppData\Local\Temp\tmpoh5wkxbh\settings.json.bak and recreated.
+ok
+
+----------------------------------------------------------------------
+Ran 150 tests in 5.674s
+
+OK

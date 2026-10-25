@@ -1,0 +1,130 @@
+101 INFO: PyInstaller: 6.22.3, contrib hooks: 2026.9
+102 INFO: Python: 3.12.14
+132 INFO: Platform: Windows-11-10.0.26200-SP0
+132 INFO: Python environment: C:\Users\Arman Acharya\OneDrive\Desktop\BITL(BRING IDEAS TO LIFE)\.venv
+244 WARNING: Failed to collect submodules for 'mediapipe.tasks.python.genai.converter' because importing 'mediapipe.tasks.python.genai.converter' raised: ImportError: JAX, Torch, and SentencePiece are required for the LLM conversions. Please run `pip install torch jax sensetencepiece`.
+840 INFO: Module search paths (PYTHONPATH):
+['C:\\Users\\Arman Acharya\\OneDrive\\Desktop\\BITL(BRING IDEAS TO LIFE)',
+ 'C:\\Users\\Arman '
+ 'Acharya\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python\\python312.zip',
+ 'C:\\Users\\Arman '
+ 'Acharya\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python\\DLLs',
+ 'C:\\Users\\Arman '
+ 'Acharya\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python\\Lib',
+ 'C:\\Users\\Arman '
+ 'Acharya\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python',
+ 'C:\\Users\\Arman Acharya\\OneDrive\\Desktop\\BITL(BRING IDEAS TO '
+ 'LIFE)\\.venv',
+ 'C:\\Users\\Arman Acharya\\OneDrive\\Desktop\\BITL(BRING IDEAS TO '
+ 'LIFE)\\.venv\\Lib\\site-packages',
+ 'C:\\Users\\Arman Acharya\\OneDrive\\Desktop\\BITL(BRING IDEAS TO LIFE)']
+pygame 2.6.1 (SDL 2.28.4, Python 3.12.14)
+Hello from the pygame community. https://www.pygame.org/contribute.html
+1214 INFO: Appending 'binaries' from .spec
+1215 INFO: Appending 'datas' from .spec
+1224 INFO: checking Analysis
+1250 INFO: Building because C:\Users\Arman Acharya\OneDrive\Desktop\BITL(BRING IDEAS TO LIFE)\ar_hands\menu.py changed
+1251 INFO: Looking for Python shared library...
+1251 INFO: Using Python shared library: C:\Users\Arman Acharya\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python312.dll
+1251 INFO: Running Analysis Analysis-00.toc
+1251 INFO: Target bytecode optimization level: 0
+1251 INFO: Initializing module dependency graph...
+1251 INFO: Initializing module graph hook caches...
+1261 INFO: Analyzing modules for base_library.zip ...
+2390 INFO: Processing standard module hook 'hook-encodings.py' from 'C:\\Users\\Arman Acharya\\OneDrive\\Desktop\\BITL(BRING IDEAS TO LIFE)\\.venv\\Lib\\site-packages\\PyInstaller\\hooks'
+2759 INFO: Processing standard module hook 'hook-math.py' from 'C:\\Users\\Arman Acharya\\OneDrive\\Desktop\\BITL(BRING IDEAS TO LIFE)\\.venv\\Lib\\site-packages\\PyInstaller\\hooks'
+3623 INFO: Processing standard module hook 'hook-pickle.py' from 'C:\\Users\\Arman Acharya\\OneDrive\\Desktop\\BITL(BRING IDEAS TO LIFE)\\.venv\\Lib\\site-packages\\PyInstaller\\hooks'
+4511 INFO: Processing standard module hook 'hook-heapq.py' from 'C:\\Users\\Arman Acharya\\OneDrive\\Desktop\\BITL(BRING IDEAS TO LIFE)\\.venv\\Lib\\site-packages\\PyInstaller\\hooks'
+4774 INFO: Caching module dependency graph...
+4797 INFO: Analyzing C:\Users\Arman Acharya\OneDrive\Desktop\BITL(BRING IDEAS TO LIFE)\main.py
+4820 INFO: Processing standard module hook 'hook-cv2.py' from 'C:\\Users\\Arman Acharya\\OneDrive\\Desktop\\BITL(BRING IDEAS TO LIFE)\\.venv\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\stdhooks'
+5257 INFO: Processing standard module hook 'hook-numpy.py' from 'C:\\Users\\Arman Acharya\\OneDrive\\Desktop\\BITL(BRING IDEAS TO LIFE)\\.venv\\Lib\\site-packages\\PyInstaller\\hooks'
+5776 INFO: Processing standard module hook 'hook-difflib.py' from 'C:\\Users\\Arman Acharya\\OneDrive\\Desktop\\BITL(BRING IDEAS TO LIFE)\\.venv\\Lib\\site-packages\\PyInstaller\\hooks'
+5905 INFO: Processing standard module hook 'hook-multiprocessing.util.py' from 'C:\\Users\\Arman Acharya\\OneDrive\\Desktop\\BITL(BRING IDEAS TO LIFE)\\.venv\\Lib\\site-packages\\PyInstaller\\hooks'
+6035 INFO: Processing standard module hook 'hook-xml.py' from 'C:\\Users\\Arman Acharya\\OneDrive\\Desktop\\BITL(BRING IDEAS TO LIFE)\\.venv\\Lib\\site-packages\\PyInstaller\\hooks'
+6193 INFO: Processing standard module hook 'hook-_ctypes.py' from 'C:\\Users\\Arman Acharya\\OneDrive\\Desktop\\BITL(BRING IDEAS TO LIFE)\\.venv\\Lib\\site-packages\\PyInstaller\\hooks'
+6467 INFO: Processing standard module hook 'hook-platform.py' from 'C:\\Users\\Arman Acharya\\OneDrive\\Desktop\\BITL(BRING IDEAS TO LIFE)\\.venv\\Lib\\site-packages\\PyInstaller\\hooks'
+6481 INFO: Processing standard module hook 'hook-sysconfig.py' from 'C:\\Users\\Arman Acharya\\OneDrive\\Desktop\\BITL(BRING IDEAS TO LIFE)\\.venv\\Lib\\site-packages\\PyInstaller\\hooks'
+6768 INFO: Processing standard module hook 'hook-webbrowser.py' from 'C:\\Users\\Arman Acharya\\OneDrive\\Desktop\\BITL(BRING IDEAS TO LIFE)\\.venv\\Lib\\site-packages\\PyInstaller\\hooks'
+7744 INFO: Processing standard module hook 'hook-pygame.py' from 'C:\\Users\\Arman Acharya\\OneDrive\\Desktop\\BITL(BRING IDEAS TO LIFE)\\.venv\\Lib\\site-packages\\pygame\\__pyinstaller'
+7907 INFO: Processing pre-safe-import-module hook 'hook-typing_extensions.py' from 'C:\\Users\\Arman Acharya\\OneDrive\\Desktop\\BITL(BRING IDEAS TO LIFE)\\.venv\\Lib\\site-packages\\PyInstaller\\hooks\\pre_safe_import_module'
+7907 INFO: SetuptoolsInfo: initializing cached setuptools info...
+8493 INFO: Processing standard module hook 'hook-sounddevice.py' from 'C:\\Users\\Arman Acharya\\OneDrive\\Desktop\\BITL(BRING IDEAS TO LIFE)\\.venv\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\stdhooks'
+8531 INFO: Processing pre-safe-import-module hook 'hook-tensorflow.py' from 'C:\\Users\\Arman Acharya\\OneDrive\\Desktop\\BITL(BRING IDEAS TO LIFE)\\.venv\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\pre_safe_import_module'
+9124 INFO: Analyzing hidden import 'mediapipe.tasks.c'
+9124 INFO: Analyzing hidden import 'mediapipe.tasks.python.benchmark'
+9130 INFO: Analyzing hidden import 'mediapipe.tasks.python.benchmark.benchmark_utils'
+9130 INFO: Analyzing hidden import 'mediapipe.tasks.python.benchmark.vision'
+9130 INFO: Analyzing hidden import 'mediapipe.tasks.python.benchmark.vision.benchmark'
+9134 INFO: Analyzing hidden import 'mediapipe.tasks.python.metadata'
+9134 INFO: Analyzing hidden import 'mediapipe.tasks.python.metadata.metadata'
+9638 INFO: Analyzing hidden import 'mediapipe.tasks.python.metadata.metadata_displayer_cli'
+9663 INFO: Processing standard module hook 'hook-xml.dom.domreg.py' from 'C:\\Users\\Arman Acharya\\OneDrive\\Desktop\\BITL(BRING IDEAS TO LIFE)\\.venv\\Lib\\site-packages\\PyInstaller\\hooks'
+9965 INFO: Analyzing hidden import 'mediapipe.tasks.python.metadata.metadata_writers'
+9965 INFO: Analyzing hidden import 'mediapipe.tasks.python.metadata.metadata_writers.image_classifier'
+9990 INFO: Analyzing hidden import 'mediapipe.tasks.python.metadata.metadata_writers.image_segmenter'
+10002 INFO: Analyzing hidden import 'mediapipe.tasks.python.metadata.metadata_writers.model_asset_bundle_utils'
+10004 INFO: Analyzing hidden import 'mediapipe.tasks.python.metadata.metadata_writers.object_detector'
+10023 INFO: Analyzing hidden import 'mediapipe.tasks.python.metadata.metadata_writers.text_classifier'
+10025 INFO: Analyzing hidden import 'mediapipe.tasks.python.test'
+10026 INFO: Analyzing hidden import 'mediapipe.tasks.python.test.audio'
+10026 INFO: Analyzing hidden import 'mediapipe.tasks.python.test.audio.audio_classifier_test'
+10165 INFO: Analyzing hidden import 'mediapipe.tasks.python.test.text'
+10168 INFO: Analyzing hidden import 'mediapipe.tasks.python.test.text.language_detector_test'
+10172 INFO: Analyzing hidden import 'mediapipe.tasks.python.test.text.text_classifier_test'
+10173 INFO: Analyzing hidden import 'mediapipe.tasks.python.test.text.text_embedder_test'
+10173 INFO: Analyzing hidden import 'mediapipe.tasks.python.test.vision'
+10173 INFO: Analyzing hidden import 'mediapipe.tasks.python.test.vision.face_detector_test'
+10192 INFO: Analyzing hidden import 'mediapipe.tasks.python.test.vision.face_landmarker_test'
+10202 INFO: Analyzing hidden import 'mediapipe.tasks.python.test.vision.hand_landmarker_test'
+10212 INFO: Analyzing hidden import 'mediapipe.tasks.python.test.vision.image_classifier_test'
+10226 INFO: Analyzing hidden import 'mediapipe.tasks.python.test.vision.image_embedder_test'
+10235 INFO: Analyzing hidden import 'mediapipe.tasks.python.test.vision.image_segmenter_test'
+10243 INFO: Analyzing hidden import 'mediapipe.tasks.python.test.vision.image_test'
+10248 INFO: Analyzing hidden import 'mediapipe.tasks.python.test.vision.interactive_segmenter_test'
+10248 INFO: Analyzing hidden import 'mediapipe.tasks.python.test.vision.object_detector_test'
+10262 INFO: Analyzing hidden import 'mediapipe.tasks.python.test.vision.pose_landmarker_test'
+10273 INFO: Processing module hooks (post-graph stage)...
+10298 INFO: Performing binary vs. data reclassification (197 entries)
+10323 INFO: Looking for ctypes DLLs
+10394 INFO: Analyzing run-time hooks ...
+10397 INFO: Including run-time hook 'pyi_rth_inspect.py' from 'C:\\Users\\Arman Acharya\\OneDrive\\Desktop\\BITL(BRING IDEAS TO LIFE)\\.venv\\Lib\\site-packages\\PyInstaller\\hooks\\rthooks'
+10399 INFO: Including run-time hook 'pyi_rth_pkgutil.py' from 'C:\\Users\\Arman Acharya\\OneDrive\\Desktop\\BITL(BRING IDEAS TO LIFE)\\.venv\\Lib\\site-packages\\PyInstaller\\hooks\\rthooks'
+10401 INFO: Including run-time hook 'pyi_rth_multiprocessing.py' from 'C:\\Users\\Arman Acharya\\OneDrive\\Desktop\\BITL(BRING IDEAS TO LIFE)\\.venv\\Lib\\site-packages\\PyInstaller\\hooks\\rthooks'
+10414 INFO: Creating base_library.zip...
+10423 INFO: Looking for dynamic libraries
+C:\Users\Arman Acharya\OneDrive\Desktop\BITL(BRING IDEAS TO LIFE)\.venv\Lib\site-packages\PyInstaller\building\build_main.py:227: UserWarning: The numpy.array_api submodule is still experimental. See NEP 47.
+  __import__(package)
+pygame 2.6.1 (SDL 2.28.4, Python 3.12.14)
+Hello from the pygame community. https://www.pygame.org/contribute.html
+10914 INFO: Extra DLL search directories (AddDllDirectory): ['C:\\Users\\Arman Acharya\\OneDrive\\Desktop\\BITL(BRING IDEAS TO LIFE)\\.venv\\Lib\\site-packages\\numpy.libs', 'C:\\Users\\Arman Acharya\\OneDrive\\Desktop\\BITL(BRING IDEAS TO LIFE)\\.venv\\Lib\\site-packages\\cv2\\../../x64/vc14/bin', 'C:\\Users\\Arman Acharya\\OneDrive\\Desktop\\BITL(BRING IDEAS TO LIFE)\\.venv\\Lib\\site-packages\\pygame']
+10914 INFO: Extra DLL search directories (PATH): ['C:\\Users\\Arman Acharya\\OneDrive\\Desktop\\BITL(BRING IDEAS TO LIFE)\\.venv\\Lib\\site-packages\\cv2\\../../x64/vc14/bin']
+11636 INFO: Warnings written to C:\Users\Arman Acharya\OneDrive\Desktop\BITL(BRING IDEAS TO LIFE)\build\BITL\warn-BITL.txt
+11672 INFO: Graph cross-reference written to C:\Users\Arman Acharya\OneDrive\Desktop\BITL(BRING IDEAS TO LIFE)\build\BITL\xref-BITL.html
+11697 INFO: checking PYZ
+11705 INFO: Building because C:\Users\Arman Acharya\OneDrive\Desktop\BITL(BRING IDEAS TO LIFE)\ar_hands\menu.py changed
+11705 INFO: Building PYZ (ZlibArchive) C:\Users\Arman Acharya\OneDrive\Desktop\BITL(BRING IDEAS TO LIFE)\build\BITL\PYZ-00.pyz
+12138 INFO: Building PYZ (ZlibArchive) C:\Users\Arman Acharya\OneDrive\Desktop\BITL(BRING IDEAS TO LIFE)\build\BITL\PYZ-00.pyz completed successfully.
+12148 INFO: checking PKG
+12148 INFO: Building because C:\Users\Arman Acharya\OneDrive\Desktop\BITL(BRING IDEAS TO LIFE)\build\BITL\PYZ-00.pyz changed
+12148 INFO: Building PKG (CArchive) BITL.pkg
+12163 INFO: Building PKG (CArchive) BITL.pkg completed successfully.
+12163 INFO: Bootloader C:\Users\Arman Acharya\OneDrive\Desktop\BITL(BRING IDEAS TO LIFE)\.venv\Lib\site-packages\PyInstaller\bootloader\Windows-64bit-intel\run.exe
+12163 INFO: checking EXE
+12164 INFO: Rebuilding EXE-00.toc because pkg is more recent
+12164 INFO: Building EXE from EXE-00.toc
+12165 INFO: Copying bootloader EXE to C:\Users\Arman Acharya\OneDrive\Desktop\BITL(BRING IDEAS TO LIFE)\build\BITL\BITL.exe
+12165 INFO: Copying icon to EXE
+12169 INFO: Copying 0 resources to EXE
+12169 INFO: Embedding manifest in EXE
+12172 INFO: Appending PKG archive to EXE
+12173 INFO: Fixing EXE headers
+12222 INFO: Building EXE from EXE-00.toc completed successfully.
+12223 INFO: checking COLLECT
+12225 INFO: Removing dir C:\Users\Arman Acharya\OneDrive\Desktop\BITL(BRING IDEAS TO LIFE)\dist\BITL
+12275 INFO: Building COLLECT COLLECT-00.toc
+12540 INFO: Building COLLECT COLLECT-00.toc completed successfully.
+12549 INFO: Build complete! The results are available in: C:\Users\Arman Acharya\OneDrive\Desktop\BITL(BRING IDEAS TO LIFE)\dist
+pygame 2.6.1 (SDL 2.28.4, Python 3.12.14)
+Hello from the pygame community. https://www.pygame.org/contribute.html
+exit 0

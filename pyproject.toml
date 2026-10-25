@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "bitl-ar-hands"
+version = "1.0.0"
+description = "Real-time webcam hand tracking, neon drawing and gesture-driven AR effects"
+readme = "README.md"
+requires-python = ">=3.10,<3.13"
+dependencies = [
+  "numpy>=1.26,<2.0",
+  "mediapipe==0.10.31; platform_system != 'Darwin' or platform_machine != 'x86_64'",
+  "opencv-python>=4.10,<4.12; platform_system != 'Darwin' or platform_machine != 'x86_64'",
+  "mediapipe==0.10.21; platform_system == 'Darwin' and platform_machine == 'x86_64'",
+  "opencv-contrib-python>=4.10,<4.12; platform_system == 'Darwin' and platform_machine == 'x86_64'",
+]
+
+[project.optional-dependencies]
+audio = ["pygame>=2.5,<3"]
+build = ["pyinstaller>=6,<7", "build>=1,<2"]
+
+[project.scripts]
+ar-hands = "ar_hands.app:main"
+
+[tool.setuptools.packages.find]
+include = ["ar_hands*"]
+exclude = ["tests*"]

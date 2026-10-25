@@ -1,0 +1,16 @@
+.venv/
+__pycache__/
+*.pyc
+screenshots/
+drawings/
+.phase1/
+recordings/
+logs/
+build/
+dist/
+*.egg-info/
+settings.json
+settings.json.bak
+# Phase delivery snapshots duplicate the source tree
+*.zip
+PHASE*_DELIVERY.md

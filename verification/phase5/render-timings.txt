@@ -1,0 +1,8 @@
+gojo: steady mean 16.41 ms, first 75.35 ms
+sukuna: steady mean 13.36 ms, first 163.48 ms
+susanoo: steady mean 18.49 ms, first 250.04 ms
+rasenshuriken: steady mean 5.37 ms, first 0.35 ms
+blue: steady mean 3.80 ms, first 0.12 ms
+red: steady mean 6.23 ms, first 0.12 ms
+purple: steady mean 3.87 ms, first 2.35 ms
+dust: steady mean 25.99 ms, first 55.19 ms

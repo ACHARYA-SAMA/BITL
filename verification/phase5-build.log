@@ -1,0 +1,214 @@
+* Creating isolated environment: venv+pip...
+* Installing packages in isolated environment:
+  - setuptools>=68
+  - wheel
+* Getting build dependencies for wheel...
+running egg_info
+creating bitl_ar_hands.egg-info
+writing bitl_ar_hands.egg-info\PKG-INFO
+writing dependency_links to bitl_ar_hands.egg-info\dependency_links.txt
+writing entry points to bitl_ar_hands.egg-info\entry_points.txt
+writing requirements to bitl_ar_hands.egg-info\requires.txt
+writing top-level names to bitl_ar_hands.egg-info\top_level.txt
+writing manifest file 'bitl_ar_hands.egg-info\SOURCES.txt'
+reading manifest file 'bitl_ar_hands.egg-info\SOURCES.txt'
+writing manifest file 'bitl_ar_hands.egg-info\SOURCES.txt'
+* Installed build dependency versions:
+  - setuptools==84.2.1
+  - wheel==0.48.0
+* Building wheel...
+running bdist_wheel
+running build
+running build_py
+creating build\lib\ar_hands
+copying ar_hands\actions.py -> build\lib\ar_hands
+copying ar_hands\app.py -> build\lib\ar_hands
+copying ar_hands\audio.py -> build\lib\ar_hands
+copying ar_hands\camera.py -> build\lib\ar_hands
+copying ar_hands\canvas.py -> build\lib\ar_hands
+copying ar_hands\cli.py -> build\lib\ar_hands
+copying ar_hands\config.py -> build\lib\ar_hands
+copying ar_hands\debug_overlay.py -> build\lib\ar_hands
+copying ar_hands\desktop.py -> build\lib\ar_hands
+copying ar_hands\draw_mode.py -> build\lib\ar_hands
+copying ar_hands\guide.py -> build\lib\ar_hands
+copying ar_hands\handpose.py -> build\lib\ar_hands
+copying ar_hands\hand_tracker.py -> build\lib\ar_hands
+copying ar_hands\hud.py -> build\lib\ar_hands
+copying ar_hands\keys.py -> build\lib\ar_hands
+copying ar_hands\logging_setup.py -> build\lib\ar_hands
+copying ar_hands\menu.py -> build\lib\ar_hands
+copying ar_hands\pen.py -> build\lib\ar_hands
+copying ar_hands\profiler.py -> build\lib\ar_hands
+copying ar_hands\quality.py -> build\lib\ar_hands
+copying ar_hands\recorder.py -> build\lib\ar_hands
+copying ar_hands\segmentation.py -> build\lib\ar_hands
+copying ar_hands\selftest.py -> build\lib\ar_hands
+copying ar_hands\settings.py -> build\lib\ar_hands
+copying ar_hands\skeleton.py -> build\lib\ar_hands
+copying ar_hands\smoothing.py -> build\lib\ar_hands
+copying ar_hands\sounds.py -> build\lib\ar_hands
+copying ar_hands\window.py -> build\lib\ar_hands
+copying ar_hands\__init__.py -> build\lib\ar_hands
+creating build\lib\ar_hands\effects
+copying ar_hands\effects\base.py -> build\lib\ar_hands\effects
+copying ar_hands\effects\blocks.py -> build\lib\ar_hands\effects
+copying ar_hands\effects\compositing.py -> build\lib\ar_hands\effects
+copying ar_hands\effects\domains.py -> build\lib\ar_hands\effects
+copying ar_hands\effects\fireball.py -> build\lib\ar_hands\effects
+copying ar_hands\effects\jjk.py -> build\lib\ar_hands\effects
+copying ar_hands\effects\lightning.py -> build\lib\ar_hands\effects
+copying ar_hands\effects\manager.py -> build\lib\ar_hands\effects
+copying ar_hands\effects\particles.py -> build\lib\ar_hands\effects
+copying ar_hands\effects\projectile.py -> build\lib\ar_hands\effects
+copying ar_hands\effects\rasenshuriken.py -> build\lib\ar_hands\effects
+copying ar_hands\effects\snap.py -> build\lib\ar_hands\effects
+copying ar_hands\effects\sprites.py -> build\lib\ar_hands\effects
+copying ar_hands\effects\susanoo.py -> build\lib\ar_hands\effects
+copying ar_hands\effects\__init__.py -> build\lib\ar_hands\effects
+creating build\lib\ar_hands\gestures
+copying ar_hands\gestures\engine.py -> build\lib\ar_hands\gestures
+copying ar_hands\gestures\events.py -> build\lib\ar_hands\gestures
+copying ar_hands\gestures\features.py -> build\lib\ar_hands\gestures
+copying ar_hands\gestures\motion.py -> build\lib\ar_hands\gestures
+copying ar_hands\gestures\recognizer.py -> build\lib\ar_hands\gestures
+copying ar_hands\gestures\snap.py -> build\lib\ar_hands\gestures
+copying ar_hands\gestures\stabilizer.py -> build\lib\ar_hands\gestures
+copying ar_hands\gestures\two_hand.py -> build\lib\ar_hands\gestures
+copying ar_hands\gestures\types.py -> build\lib\ar_hands\gestures
+copying ar_hands\gestures\__init__.py -> build\lib\ar_hands\gestures
+running egg_info
+writing bitl_ar_hands.egg-info\PKG-INFO
+writing dependency_links to bitl_ar_hands.egg-info\dependency_links.txt
+writing entry points to bitl_ar_hands.egg-info\entry_points.txt
+writing requirements to bitl_ar_hands.egg-info\requires.txt
+writing top-level names to bitl_ar_hands.egg-info\top_level.txt
+reading manifest file 'bitl_ar_hands.egg-info\SOURCES.txt'
+writing manifest file 'bitl_ar_hands.egg-info\SOURCES.txt'
+installing to build\bdist.win-amd64\wheel
+running install
+running install_lib
+creating build\bdist.win-amd64\wheel
+creating build\bdist.win-amd64\wheel\ar_hands
+copying build\lib\ar_hands\actions.py -> build\bdist.win-amd64\wheel\.\ar_hands
+copying build\lib\ar_hands\app.py -> build\bdist.win-amd64\wheel\.\ar_hands
+copying build\lib\ar_hands\audio.py -> build\bdist.win-amd64\wheel\.\ar_hands
+copying build\lib\ar_hands\camera.py -> build\bdist.win-amd64\wheel\.\ar_hands
+copying build\lib\ar_hands\canvas.py -> build\bdist.win-amd64\wheel\.\ar_hands
+copying build\lib\ar_hands\cli.py -> build\bdist.win-amd64\wheel\.\ar_hands
+copying build\lib\ar_hands\config.py -> build\bdist.win-amd64\wheel\.\ar_hands
+copying build\lib\ar_hands\debug_overlay.py -> build\bdist.win-amd64\wheel\.\ar_hands
+copying build\lib\ar_hands\desktop.py -> build\bdist.win-amd64\wheel\.\ar_hands
+copying build\lib\ar_hands\draw_mode.py -> build\bdist.win-amd64\wheel\.\ar_hands
+creating build\bdist.win-amd64\wheel\ar_hands\effects
+copying build\lib\ar_hands\effects\base.py -> build\bdist.win-amd64\wheel\.\ar_hands\effects
+copying build\lib\ar_hands\effects\blocks.py -> build\bdist.win-amd64\wheel\.\ar_hands\effects
+copying build\lib\ar_hands\effects\compositing.py -> build\bdist.win-amd64\wheel\.\ar_hands\effects
+copying build\lib\ar_hands\effects\domains.py -> build\bdist.win-amd64\wheel\.\ar_hands\effects
+copying build\lib\ar_hands\effects\fireball.py -> build\bdist.win-amd64\wheel\.\ar_hands\effects
+copying build\lib\ar_hands\effects\jjk.py -> build\bdist.win-amd64\wheel\.\ar_hands\effects
+copying build\lib\ar_hands\effects\lightning.py -> build\bdist.win-amd64\wheel\.\ar_hands\effects
+copying build\lib\ar_hands\effects\manager.py -> build\bdist.win-amd64\wheel\.\ar_hands\effects
+copying build\lib\ar_hands\effects\particles.py -> build\bdist.win-amd64\wheel\.\ar_hands\effects
+copying build\lib\ar_hands\effects\projectile.py -> build\bdist.win-amd64\wheel\.\ar_hands\effects
+copying build\lib\ar_hands\effects\rasenshuriken.py -> build\bdist.win-amd64\wheel\.\ar_hands\effects
+copying build\lib\ar_hands\effects\snap.py -> build\bdist.win-amd64\wheel\.\ar_hands\effects
+copying build\lib\ar_hands\effects\sprites.py -> build\bdist.win-amd64\wheel\.\ar_hands\effects
+copying build\lib\ar_hands\effects\susanoo.py -> build\bdist.win-amd64\wheel\.\ar_hands\effects
+copying build\lib\ar_hands\effects\__init__.py -> build\bdist.win-amd64\wheel\.\ar_hands\effects
+creating build\bdist.win-amd64\wheel\ar_hands\gestures
+copying build\lib\ar_hands\gestures\engine.py -> build\bdist.win-amd64\wheel\.\ar_hands\gestures
+copying build\lib\ar_hands\gestures\events.py -> build\bdist.win-amd64\wheel\.\ar_hands\gestures
+copying build\lib\ar_hands\gestures\features.py -> build\bdist.win-amd64\wheel\.\ar_hands\gestures
+copying build\lib\ar_hands\gestures\motion.py -> build\bdist.win-amd64\wheel\.\ar_hands\gestures
+copying build\lib\ar_hands\gestures\recognizer.py -> build\bdist.win-amd64\wheel\.\ar_hands\gestures
+copying build\lib\ar_hands\gestures\snap.py -> build\bdist.win-amd64\wheel\.\ar_hands\gestures
+copying build\lib\ar_hands\gestures\stabilizer.py -> build\bdist.win-amd64\wheel\.\ar_hands\gestures
+copying build\lib\ar_hands\gestures\two_hand.py -> build\bdist.win-amd64\wheel\.\ar_hands\gestures
+copying build\lib\ar_hands\gestures\types.py -> build\bdist.win-amd64\wheel\.\ar_hands\gestures
+copying build\lib\ar_hands\gestures\__init__.py -> build\bdist.win-amd64\wheel\.\ar_hands\gestures
+copying build\lib\ar_hands\guide.py -> build\bdist.win-amd64\wheel\.\ar_hands
+copying build\lib\ar_hands\handpose.py -> build\bdist.win-amd64\wheel\.\ar_hands
+copying build\lib\ar_hands\hand_tracker.py -> build\bdist.win-amd64\wheel\.\ar_hands
+copying build\lib\ar_hands\hud.py -> build\bdist.win-amd64\wheel\.\ar_hands
+copying build\lib\ar_hands\keys.py -> build\bdist.win-amd64\wheel\.\ar_hands
+copying build\lib\ar_hands\logging_setup.py -> build\bdist.win-amd64\wheel\.\ar_hands
+copying build\lib\ar_hands\menu.py -> build\bdist.win-amd64\wheel\.\ar_hands
+copying build\lib\ar_hands\pen.py -> build\bdist.win-amd64\wheel\.\ar_hands
+copying build\lib\ar_hands\profiler.py -> build\bdist.win-amd64\wheel\.\ar_hands
+copying build\lib\ar_hands\quality.py -> build\bdist.win-amd64\wheel\.\ar_hands
+copying build\lib\ar_hands\recorder.py -> build\bdist.win-amd64\wheel\.\ar_hands
+copying build\lib\ar_hands\segmentation.py -> build\bdist.win-amd64\wheel\.\ar_hands
+copying build\lib\ar_hands\selftest.py -> build\bdist.win-amd64\wheel\.\ar_hands
+copying build\lib\ar_hands\settings.py -> build\bdist.win-amd64\wheel\.\ar_hands
+copying build\lib\ar_hands\skeleton.py -> build\bdist.win-amd64\wheel\.\ar_hands
+copying build\lib\ar_hands\smoothing.py -> build\bdist.win-amd64\wheel\.\ar_hands
+copying build\lib\ar_hands\sounds.py -> build\bdist.win-amd64\wheel\.\ar_hands
+copying build\lib\ar_hands\window.py -> build\bdist.win-amd64\wheel\.\ar_hands
+copying build\lib\ar_hands\__init__.py -> build\bdist.win-amd64\wheel\.\ar_hands
+running install_egg_info
+Copying bitl_ar_hands.egg-info to build\bdist.win-amd64\wheel\.\bitl_ar_hands-1.0.0-py3.12.egg-info
+running install_scripts
+creating build\bdist.win-amd64\wheel\bitl_ar_hands-1.0.0.dist-info\WHEEL
+creating 'C:\\Users\\Arman Acharya\\OneDrive\\Desktop\\BITL(BRING IDEAS TO LIFE)\\dist\\.tmp-1mgh685l\\bitl_ar_hands-1.0.0-py3-none-any.whl' and adding 'build\\bdist.win-amd64\\wheel' to it
+adding 'ar_hands/__init__.py'
+adding 'ar_hands/actions.py'
+adding 'ar_hands/app.py'
+adding 'ar_hands/audio.py'
+adding 'ar_hands/camera.py'
+adding 'ar_hands/canvas.py'
+adding 'ar_hands/cli.py'
+adding 'ar_hands/config.py'
+adding 'ar_hands/debug_overlay.py'
+adding 'ar_hands/desktop.py'
+adding 'ar_hands/draw_mode.py'
+adding 'ar_hands/guide.py'
+adding 'ar_hands/hand_tracker.py'
+adding 'ar_hands/handpose.py'
+adding 'ar_hands/hud.py'
+adding 'ar_hands/keys.py'
+adding 'ar_hands/logging_setup.py'
+adding 'ar_hands/menu.py'
+adding 'ar_hands/pen.py'
+adding 'ar_hands/profiler.py'
+adding 'ar_hands/quality.py'
+adding 'ar_hands/recorder.py'
+adding 'ar_hands/segmentation.py'
+adding 'ar_hands/selftest.py'
+adding 'ar_hands/settings.py'
+adding 'ar_hands/skeleton.py'
+adding 'ar_hands/smoothing.py'
+adding 'ar_hands/sounds.py'
+adding 'ar_hands/window.py'
+adding 'ar_hands/effects/__init__.py'
+adding 'ar_hands/effects/base.py'
+adding 'ar_hands/effects/blocks.py'
+adding 'ar_hands/effects/compositing.py'
+adding 'ar_hands/effects/domains.py'
+adding 'ar_hands/effects/fireball.py'
+adding 'ar_hands/effects/jjk.py'
+adding 'ar_hands/effects/lightning.py'
+adding 'ar_hands/effects/manager.py'
+adding 'ar_hands/effects/particles.py'
+adding 'ar_hands/effects/projectile.py'
+adding 'ar_hands/effects/rasenshuriken.py'
+adding 'ar_hands/effects/snap.py'
+adding 'ar_hands/effects/sprites.py'
+adding 'ar_hands/effects/susanoo.py'
+adding 'ar_hands/gestures/__init__.py'
+adding 'ar_hands/gestures/engine.py'
+adding 'ar_hands/gestures/events.py'
+adding 'ar_hands/gestures/features.py'
+adding 'ar_hands/gestures/motion.py'
+adding 'ar_hands/gestures/recognizer.py'
+adding 'ar_hands/gestures/snap.py'
+adding 'ar_hands/gestures/stabilizer.py'
+adding 'ar_hands/gestures/two_hand.py'
+adding 'ar_hands/gestures/types.py'
+adding 'bitl_ar_hands-1.0.0.dist-info/METADATA'
+adding 'bitl_ar_hands-1.0.0.dist-info/WHEEL'
+adding 'bitl_ar_hands-1.0.0.dist-info/entry_points.txt'
+adding 'bitl_ar_hands-1.0.0.dist-info/top_level.txt'
+adding 'bitl_ar_hands-1.0.0.dist-info/RECORD'
+removing build\bdist.win-amd64\wheel
+Successfully built bitl_ar_hands-1.0.0-py3-none-any.whl

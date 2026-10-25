@@ -1,0 +1,20 @@
+Settings file is corrupt (Expecting property name enclosed in double quotes: line 1 column 2 (char 1)); moved to C:\Users\ARMANA~1\AppData\Local\Temp\tmp9yfdhsvt\settings.json.bak and recreated.
+======================================================================
+ERROR: test_camera_resize_during_dust_keeps_pipeline_working (tests.test_phase5.IntegrationTests.test_camera_resize_during_dust_keeps_pipeline_working)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "C:\Users\Arman Acharya\OneDrive\Desktop\BITL(BRING IDEAS TO LIFE)\tests\test_phase5.py", line 37, in test_camera_resize_during_dust_keeps_pipeline_working
+    app.process_frame(np.zeros((360, 640, 3), np.uint8), Tracker())
+  File "C:\Users\Arman Acharya\OneDrive\Desktop\BITL(BRING IDEAS TO LIFE)\ar_hands\app.py", line 239, in process_frame
+    self.effects.render(frame)
+  File "C:\Users\Arman Acharya\OneDrive\Desktop\BITL(BRING IDEAS TO LIFE)\ar_hands\effects\manager.py", line 165, in render
+    effect.render(frame, ctx)
+  File "C:\Users\Arman Acharya\OneDrive\Desktop\BITL(BRING IDEAS TO LIFE)\ar_hands\effects\snap.py", line 163, in render
+    cv2.blendLinear(self.ghost, frame, intact, 1.0 - intact, dst=frame)
+cv2.error: OpenCV(4.11.0) D:\a\opencv-python\opencv-python\opencv\modules\imgproc\src\blend.cpp:383: error: (-215:Assertion failed) size == _src2.size() && size == _weights1.size() && size == _weights2.size() in function 'cv::blendLinear'
+
+
+----------------------------------------------------------------------
+Ran 21 tests in 1.673s
+
+FAILED (errors=1)

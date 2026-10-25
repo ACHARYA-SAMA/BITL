@@ -1,0 +1,5 @@
+INFO    PASS Hand model and blank-frame inference
+INFO    PASS Person segmentation for domains and dust
+INFO    PASS Procedural sprites and edge clipping
+INFO    PASS Settings round-trip
+selftest exit 0

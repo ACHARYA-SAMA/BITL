@@ -1,0 +1,7 @@
+# Python 3.10-3.12. Install exactly one OpenCV distribution per platform.
+mediapipe==0.10.31 ; platform_system != "Darwin" or platform_machine != "x86_64"
+opencv-python>=4.10,<4.12 ; platform_system != "Darwin" or platform_machine != "x86_64"
+# Intel macOS needs the older Tasks-capable wheel; it requires contrib OpenCV.
+mediapipe==0.10.21 ; platform_system == "Darwin" and platform_machine == "x86_64"
+opencv-contrib-python>=4.10,<4.12 ; platform_system == "Darwin" and platform_machine == "x86_64"
+numpy>=1.26,<2.0

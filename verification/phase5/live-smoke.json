@@ -1,0 +1,16 @@
+{
+  "frames_processed": 132,
+  "measured_fps": 19.87,
+  "elapsed_seconds": 10.51,
+  "stage_averages_ms": {
+    "capture": 26.325796675519086,
+    "detect": 15.14196000158942,
+    "segment": 0.52682166666879,
+    "gestures": 0.05171500088181347,
+    "effects": 0.16196415720817944,
+    "canvas": 0.2603974979138002,
+    "render": 1.2634883353409048,
+    "imshow": 5.853765000938438
+  },
+  "captured_media_saved": false
+}

@@ -1,0 +1,36 @@
+INFO: Created TensorFlow Lite XNNPACK delegate for CPU.
+W0000 00:00:1792843338.032477   13908 inference_feedback_manager.cc:121] Feedback manager requires a model with a single signature inference. Disabling support for feedback tensors.
+W0000 00:00:1792843338.040464   34212 inference_feedback_manager.cc:121] Feedback manager requires a model with a single signature inference. Disabling support for feedback tensors.
+INFO    Synthesized 26 sound effects into C:\Users\Arman Acharya\OneDrive\Desktop\BITL(BRING IDEAS TO LIFE)\assets\sounds
+INFO    Audio ready: 26 sounds, 12 channels.
+INFO    Camera 0: 1280x720 at 30.0 reported FPS, format MJPG
+INFO    Camera live
+W0000 00:00:1792843343.017064   23092 landmark_projection_calculator.cc:81] Using NORM_RECT without IMAGE_DIMENSIONS is only supported for the square ROI. Provide IMAGE_DIMENSIONS or use PROJECTION_MATRIX.
+W0000 00:00:1792843343.080839   32148 inference_feedback_manager.cc:121] Feedback manager requires a model with a single signature inference. Disabling support for feedback tensors.
+INFO    Quality down: particle budget (18 FPS possible)
+INFO    Profiler: 79 frames, average ms per frame:
+  capture     73.82 ms   71.6%
+  detect      11.17 ms   10.8%
+  segment      1.60 ms    1.5%
+  gestures     0.06 ms    0.1%
+  effects      0.41 ms    0.4%
+  canvas       0.29 ms    0.3%
+  render       1.09 ms    1.1%
+  imshow      14.62 ms   14.2%
+  total      103.05 ms  (processing 29.23 ms = 34 FPS achievable)
+{
+  "frames_processed": 79,
+  "measured_fps": 15.22,
+  "elapsed_seconds": 10.58,
+  "stage_averages_ms": {
+    "capture": 73.82378102386299,
+    "detect": 11.16868734648569,
+    "segment": 1.5958417708030608,
+    "gestures": 0.06037848099736096,
+    "effects": 0.409055672161564,
+    "canvas": 0.28744683147089767,
+    "render": 1.085270894691348,
+    "imshow": 14.61959367211248
+  },
+  "captured_media_saved": false
+}
